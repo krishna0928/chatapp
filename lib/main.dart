@@ -1,25 +1,23 @@
-import 'package:chatapp/screens/LoginScreen.dart';
-import 'package:chatapp/screens/Signup.dart';
+import 'package:chatapp/screens/wrapper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(MaterialApp(
-    home: LoginPage(),
+    home: Home(),
     debugShowCheckedModeBanner: false,
   ));
+  SystemChrome.setEnabledSystemUIOverlays([]);
 }
 
-class Chatter extends StatefulWidget {
-  @override
-  _ChatterState createState() => _ChatterState();
-}
-
-class _ChatterState extends State<Chatter> {
+class Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return StreamProvider<FirebaseUser>.value(
+      value: FirebaseAuth.instance.currentUser().asStream(),
+      child: Wrapper(),
     );
   }
 }
-
-

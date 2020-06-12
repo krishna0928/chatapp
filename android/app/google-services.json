@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "458098822491",
+    "firebase_url": "https://chatter-by-shanmukeshwar.firebaseio.com",
+    "project_id": "chatter-by-shanmukeshwar",
+    "storage_bucket": "chatter-by-shanmukeshwar.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458098822491:android:ccfa20f9e7dcdab960de7e",
+        "android_client_info": {
+          "package_name": "kelabs.chatapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "458098822491-kjolu1tdertjrjp3fc9g4h28mdeiua6t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9NmJ-pJntYnMhzoJYcE5HZ11sjOTvNwc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "458098822491-kjolu1tdertjrjp3fc9g4h28mdeiua6t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "458098822491-5ake60lgbh1v1git7fvk0v15pos64j78.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "kelabs.chatapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
