@@ -1,8 +1,9 @@
 import 'package:chatapp/Services/Authentication.dart';
 import 'package:chatapp/screens/LoginScreen.dart';
 import 'package:chatapp/widgets/custom_app_bar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class Settings extends StatefulWidget {
@@ -14,15 +15,13 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  Firestore _firestore = Firestore.instance;
-  Stream userData;
   FirebaseUser _firebaseUser;
+  DatabaseReference _userRef =
+      FirebaseDatabase.instance.reference().child('Users');
   FirebaseAuth _auth = FirebaseAuth.instance;
 
   initUserData() {
-    userData =
-        _firestore.collection('Users').document(widget.uid).get().asStream();
-
+    _userRef = _userRef.child(widget.uid);
     _auth.currentUser().then((value) => _firebaseUser = value);
   }
 
@@ -44,8 +43,8 @@ class _SettingsState extends State<Settings> {
             height: 30,
           ),
           StreamBuilder(
-            stream: userData,
-            builder: (_, snapshot) {
+            stream: _userRef.onValue,
+            builder: (_, AsyncSnapshot<Event> snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(
                   child: Column(
@@ -61,7 +60,6 @@ class _SettingsState extends State<Settings> {
                   ),
                 );
               } else {
-                print(snapshot.data.data['name']);
                 return Column(
                   children: <Widget>[
                     Stack(
@@ -87,20 +85,53 @@ class _SettingsState extends State<Settings> {
                         )
                       ],
                     ),
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      child: TextFormField(
-                        onTap: () {
-                          print('called');
-                        },
-                        enabled: true,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          alignLabelWithHint: true,
-                            labelText: snapshot.data.data['name'],
-                            suffixIcon: Icon(Icons.edit),
-                            hintText: 'tap to change'),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          child: Text(
+                            snapshot.data.snapshot.value['name'],
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 21),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            String updatedName;
+                            showDialog(
+                                context: context,
+                                child: CupertinoAlertDialog(
+                                  title: Text('Change Name'),
+                                  content: Card(
+                                    child: TextField(
+                                      onChanged: (value) {
+                                        updatedName = value;
+                                      },
+                                      decoration: InputDecoration(),
+                                    ),
+                                  ),
+                                  actions: <Widget>[
+                                    CupertinoDialogAction(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text('Cancel')),
+                                    CupertinoDialogAction(
+                                        onPressed: () async {
+                                          if (updatedName.length > 3) {
+                                            await _userRef
+                                                .update({'name': updatedName});
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                        child: Text('Change')),
+                                  ],
+                                ));
+                          },
+                          icon: Icon(Icons.edit),
+                        )
+                      ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -108,13 +139,44 @@ class _SettingsState extends State<Settings> {
                         Container(
                           padding: EdgeInsets.all(10),
                           child: Text(
-                            snapshot.data.data['status'],
+                            snapshot.data.snapshot.value['status'],
                             style: TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 21),
                           ),
                         ),
                         IconButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            String updatedStatus;
+                            showDialog(
+                                context: context,
+                                child: CupertinoAlertDialog(
+                                  title: Text('Change Status'),
+                                  content: Card(
+                                    child: TextField(
+                                      onChanged: (value) {
+                                        updatedStatus = value;
+                                      },
+                                      decoration: InputDecoration(),
+                                    ),
+                                  ),
+                                  actions: <Widget>[
+                                    CupertinoDialogAction(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text('Cancel')),
+                                    CupertinoDialogAction(
+                                        onPressed: () async {
+                                          if (updatedStatus.length > 6) {
+                                            await _userRef.update(
+                                                {'status': updatedStatus});
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                        child: Text('Change')),
+                                  ],
+                                ));
+                          },
                           icon: Icon(Icons.edit),
                         )
                       ],

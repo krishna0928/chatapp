@@ -1,9 +1,7 @@
-import 'package:chatapp/Services/Authentication.dart';
 import 'package:chatapp/screens/chats.dart';
 import 'package:chatapp/screens/friends.dart';
 import 'package:chatapp/screens/search.dart';
 import 'package:chatapp/screens/settings.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class MainPage extends StatefulWidget {

@@ -9,7 +9,7 @@ void main() {
     home: Home(),
     debugShowCheckedModeBanner: false,
   ));
-  SystemChrome.setEnabledSystemUIOverlays([]);
+  SystemChrome.setEnabledSystemUIOverlays([SystemUiOverlay.bottom]);
 }
 
 class Home extends StatelessWidget {

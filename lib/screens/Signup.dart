@@ -17,12 +17,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    return loading
-        ? Center(
-            child: CircularProgressIndicator(),
-          )
-        : Scaffold(
-            body: Container(
+    return Scaffold(
+      body: loading
+          ? Center(
+              child: CircularProgressIndicator(),
+            )
+          : Container(
               width: double.infinity,
               decoration: BoxDecoration(
                   gradient: LinearGradient(begin: Alignment.topCenter, colors: [
@@ -31,31 +31,19 @@ class _SignUpPageState extends State<SignUpPage> {
                 Colors.orange[400],
               ])),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    height: 50,
+                    height: 30,
                   ),
                   Padding(
                     padding: EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          "Register",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 40,
-                              letterSpacing: 1.0),
-                        ),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          "For Chatter",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-                      ],
+                    child: Text(
+                      "Register",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          letterSpacing: 1.0,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(height: 15),
@@ -337,7 +325,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ],
               ),
             ),
-          );
+    );
   }
 
   void createUser() async {
@@ -346,7 +334,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (result != null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) {
-        return MainPage();
+        return MainPage(
+          uid: result,
+        );
       }));
     } else {
       setState(() {

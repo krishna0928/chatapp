@@ -18,12 +18,12 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return loading
-        ? Center(
-            child: CircularProgressIndicator(),
-          )
-        : Scaffold(
-            body: Container(
+    return Scaffold(
+      body: loading
+          ? Center(
+              child: CircularProgressIndicator(),
+            )
+          : Container(
               width: double.infinity,
               decoration: BoxDecoration(
                   gradient: LinearGradient(begin: Alignment.topCenter, colors: [
@@ -32,10 +32,9 @@ class _LoginPageState extends State<LoginPage> {
                 Colors.orange[400],
               ])),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    height: 50,
+                    height: 30,
                   ),
                   Padding(
                     padding: EdgeInsets.all(20),
@@ -43,8 +42,9 @@ class _LoginPageState extends State<LoginPage> {
                       "Login",
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 40,
-                          letterSpacing: 1.0),
+                          fontSize: 36,
+                          letterSpacing: 1.0,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(height: 15),
@@ -265,18 +265,18 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
             ),
-          );
+    );
   }
 
   void signin() async {
     dynamic result =
         await AuthServices().signInWithEmailAndPass(email, password);
 
-        print(result);
-
     if (result != null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) {
-        return MainPage();
+        return MainPage(
+          uid: result,
+        );
       }));
     } else {
       setState(() {

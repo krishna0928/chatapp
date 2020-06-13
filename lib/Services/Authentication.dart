@@ -1,9 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class AuthServices {
   FirebaseAuth _auth = FirebaseAuth.instance;
-  Firestore _firestore = Firestore.instance;
+  DatabaseReference _usersData =
+      FirebaseDatabase.instance.reference().child('Users');
+
+  String userID;
 
   Future registerWithEmailAndPass(
       String email, String password, String name) async {
@@ -11,14 +14,15 @@ class AuthServices {
       await _auth
           .createUserWithEmailAndPassword(email: email, password: password)
           .then((value) async {
-        await _firestore.collection('Users').document(value.user.uid).setData({
+        await _usersData.child(value.user.uid).set({
           'name': name,
           'status': 'Hey there , I\'m using Chatter',
           'thumbUrl': 'null',
           'imageUrl': 'null'
         });
+        userID = value.user.uid;
       });
-      return true;
+      return userID;
     } catch (e) {
       print(e);
       return null;
@@ -27,9 +31,13 @@ class AuthServices {
 
   Future signInWithEmailAndPass(String email, String password) async {
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      await _auth
+          .signInWithEmailAndPassword(email: email, password: password)
+          .then((value) {
+        userID = value.user.uid;
+      });
 
-      return true;
+      return userID;
     } catch (e) {
       print(e);
       return null;
