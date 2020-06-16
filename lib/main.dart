@@ -5,11 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(statusBarColor: Colors.transparent));
   runApp(MaterialApp(
     home: Home(),
+    theme: ThemeData(
+        primaryColor: Colors.deepOrangeAccent,
+        primarySwatch: Colors.deepOrange,
+        accentColor: Colors.orange
+        ),
     debugShowCheckedModeBanner: false,
   ));
-  SystemChrome.setEnabledSystemUIOverlays([SystemUiOverlay.bottom]);
 }
 
 class Home extends StatelessWidget {

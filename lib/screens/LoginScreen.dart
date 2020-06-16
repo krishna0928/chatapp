@@ -269,8 +269,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void signin() async {
-    dynamic result =
-        await AuthServices().signInWithEmailAndPass(email, password);
+    dynamic result = await AuthServices()
+        .signInWithEmailAndPass(email, password);
 
     if (result != null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) {

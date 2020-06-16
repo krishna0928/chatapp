@@ -13,22 +13,18 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  
   initPages() {
     String uid = widget.uid;
     screenList = [
-      Chats(),
-      Search(),
-      Friends(),
-      Settings(
-        uid: uid,
-      )
+      Chats(uid: uid),
+      Search(uid: uid),
+      Friends(uid: uid),
+      Settings(uid: uid)
     ];
   }
 
   @override
   void initState() {
-    print(widget.uid);
     initPages();
     super.initState();
   }

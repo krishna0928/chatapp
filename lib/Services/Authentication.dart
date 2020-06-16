@@ -34,7 +34,9 @@ class AuthServices {
       await _auth
           .signInWithEmailAndPassword(email: email, password: password)
           .then((value) {
-        userID = value.user.uid;
+        if (value.user != null) {
+          userID = value.user.uid;
+        }
       });
 
       return userID;

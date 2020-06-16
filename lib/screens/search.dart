@@ -1,6 +1,7 @@
+import 'package:chatapp/models/users.dart';
 import 'package:chatapp/screens/profile_screen.dart';
-import 'package:chatapp/widgets/custom_app_bar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chatapp/widgets/custom_widgets.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 class Search extends StatefulWidget {
@@ -12,18 +13,39 @@ class Search extends StatefulWidget {
 }
 
 class _SearchState extends State<Search> {
-  CollectionReference _searchRef = Firestore.instance.collection('Users');
-  List<DocumentSnapshot> _docs;
+  CustomWidgets _customWidgets = CustomWidgets();
+  DatabaseReference _usersData =
+      FirebaseDatabase.instance.reference().child('Users');
   String _searchQuery;
   bool loading = false;
+  List<Users> _resultUsers = [];
 
   searchForUser() async {
     setState(() {
       loading = true;
     });
-    _docs =
-        (await _searchRef.where("name", isEqualTo: _searchQuery).getDocuments())
-            .documents;
+    _resultUsers.clear();
+    if (_searchQuery.length > 0) {
+      Query _query = _usersData
+          .orderByChild("name")
+          .startAt(_searchQuery)
+          .endAt(_searchQuery + "\uf8ff");
+
+      await _query.once().then((value) {
+        if (value.value != null) {
+          value.value.forEach((key, value) {
+            if (key != widget.uid) {
+              _resultUsers.add(Users(
+                  name: value['name'],
+                  imageUrl: value['imageUrl'],
+                  thumbUrl: value['thumbUrl'],
+                  status: value['status'],
+                  uid: key));
+            }
+          });
+        }
+      });
+    }
 
     setState(() {
       loading = false;
@@ -31,107 +53,80 @@ class _SearchState extends State<Search> {
   }
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        CustomAppBar(
-          title: 'Search',
-        ),
-        SizedBox(
-          height: 30,
-        ),
-        Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Container(
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.white,
-                  border: Border.all(width: 0.5, color: Colors.blueGrey)),
-              child: TextField(
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-                decoration: InputDecoration(
+    return Scaffold(
+      backgroundColor: Theme.of(context).primaryColor,
+      appBar: _customWidgets.getCustomAppBar('Search'),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30), topRight: Radius.circular(30))),
+        child: Column(
+          children: <Widget>[
+            Padding(
+                padding: const EdgeInsets.all(9),
+                child: TextField(
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                      searchForUser();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide(color: Colors.grey.shade100)),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
                     suffixIcon: IconButton(
-                      icon: Icon(Icons.search),
+                      icon: Icon(
+                        Icons.search,
+                        color: Colors.grey.shade400,
+                        size: 20,
+                      ),
                       onPressed: () {
-                        setState(() {
-                          if (_docs != null) {
-                            _docs.clear();
-                          }
-                        });
                         searchForUser();
                       },
                     ),
-                    contentPadding: EdgeInsets.all(15),
+                    contentPadding: EdgeInsets.all(9),
                     border: InputBorder.none,
                     hintText: 'Search your friends',
-                    fillColor: Colors.blueGrey),
-              ),
-            )),
-        if (_docs != null && !loading)
-          ListView.builder(
-            shrinkWrap: true,
-            itemCount: _docs.length,
-            itemBuilder: (_, index) {
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) {
-                      return ProfileScreen(
-                        userMap: _docs[index].data,
-                        userID: _docs[index].documentID,
-                        myUid: widget.uid,
-                      );
-                    }));
-                  },
-                  child: Container(
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(18)),
-                    child: Row(
-                      children: <Widget>[
-                        CircleAvatar(
-                          maxRadius: 25,
-                          minRadius: 25,
-                        ),
-                        SizedBox(
-                          width: 16,
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              _docs[index]['name'],
-                              style: TextStyle(
-                                  color: Colors.blueGrey,
-                                  fontSize: 25,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(
-                              height: 5,
-                            ),
-                            Text(
-                              _docs[index]['status'],
-                              style: TextStyle(
-                                  color: Colors.blueGrey,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
+                    hintStyle: TextStyle(color: Colors.grey.shade400),
                   ),
-                ),
-              );
-            },
-          )
-      ],
+                )),
+            loading
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _resultUsers.length,
+                    itemBuilder: (_, index) {
+                      return GestureDetector(
+                          onTap: () {
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (_) {
+                              return ProfileScreen(
+                                userData: _resultUsers[index],
+                                myUid: widget.uid,
+                              );
+                            }));
+                          },
+                          child: _customWidgets.getDetailedCard(
+                              _resultUsers[index].name,
+                              _resultUsers[index].status,
+                              _resultUsers[index].thumbUrl));
+                    },
+                  )
+          ],
+        ),
+      ),
     );
   }
 }
