@@ -1,6 +1,7 @@
 import 'package:chatapp/models/users.dart';
 import 'package:chatapp/screens/message_screen.dart';
 import 'package:chatapp/widgets/custom_widgets.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +19,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   DatabaseReference _rootRef;
   DatabaseReference _friendsRef;
   DatabaseReference _friendRqRef;
+  var myData;
+
   bool loading = true;
 
   Future getFriendsRef() async {
@@ -58,8 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   setUpRef() {
     _rootRef = FirebaseDatabase.instance.reference();
     _friendsRef = _rootRef.child('friends');
-
     _friendRqRef = _rootRef.child('friendReq');
+    _rootRef.child('Users').child(widget.myUid).once().then((value) {
+      myData = value.value;
+    });
   }
 
   @override
@@ -201,14 +206,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: Colors.deepOrangeAccent,
             ),
             RaisedButton(
-              onPressed: () {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (_) {
-                  return MessagingScreeen(
-                    myUid: widget.myUid,
-                    profileUser: widget.userData,
-                  );
-                }));
+              onPressed: () async {
+                Firestore.instance
+                    .collection(widget.myUid)
+                    .document(widget.userData.uid)
+                    .setData({
+                  'timestamp': DateTime.now().microsecondsSinceEpoch,
+                  'name': widget.userData.name,
+                  'thumbUrl': widget.userData.thumbUrl,
+                }).whenComplete(() {
+                  Firestore.instance
+                      .collection(widget.userData.uid)
+                      .document(widget.myUid)
+                      .setData({
+                    'timestamp': DateTime.now().microsecondsSinceEpoch,
+                    'name': myData['name'],
+                    'thumbUrl': myData['thumbUrl']
+                  });
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (_) {
+                    return MessagingScreeen(
+                      myUid: widget.myUid,
+                      userName: widget.userData.name,
+                      thumbnail: widget.userData.thumbUrl,
+                      uid: widget.userData.uid,
+                    );
+                  }));
+                });
               },
               child: Text(
                 'Message',

@@ -28,8 +28,8 @@ class _SearchState extends State<Search> {
     if (_searchQuery.length > 0) {
       Query _query = _usersData
           .orderByChild("name")
-          .startAt(_searchQuery)
-          .endAt(_searchQuery + "\uf8ff");
+          .startAt(_searchQuery.toUpperCase())
+          .endAt(_searchQuery.toLowerCase() + "\uf8ff");
 
       await _query.once().then((value) {
         if (value.value != null) {
@@ -68,7 +68,9 @@ class _SearchState extends State<Search> {
         decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30), topRight: Radius.circular(30))),
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            )),
         child: Column(
           children: <Widget>[
             Padding(

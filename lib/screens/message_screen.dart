@@ -1,16 +1,14 @@
-import 'package:chatapp/models/message.dart';
-import 'package:chatapp/screens/chats.dart';
-import 'package:chatapp/widgets/chat_bubble.dart';
 import 'package:chatapp/widgets/convers_appbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class MessagingScreeen extends StatefulWidget {
-  final String myUid;
-  final dynamic profileUser;
+  final myUid;
+  final userName, thumbnail, uid;
 
-  const MessagingScreeen({Key key, this.myUid, this.profileUser})
+  const MessagingScreeen(
+      {Key key, this.myUid, this.thumbnail, this.uid, this.userName})
       : super(key: key);
   @override
   _MessagingScreeenState createState() => _MessagingScreeenState();
@@ -18,23 +16,23 @@ class MessagingScreeen extends StatefulWidget {
 
 class _MessagingScreeenState extends State<MessagingScreeen> {
   String _enteredMessage;
-  Firestore _rootReference = Firestore.instance;
   DocumentReference _myMessageReference;
   DocumentReference _userMessageReference;
-  CollectionReference _messageRef;
   Stream _messageStream;
 
   final _messageController = TextEditingController();
 
-  Future<void> initData() async {
-    _messageRef = _rootReference.collection('messages');
+  initData() {
+    Firestore _rootReference = Firestore.instance;
 
-    _myMessageReference = _messageRef.document(widget.myUid);
+    _myMessageReference =
+        _rootReference.collection(widget.myUid).document(widget.uid);
 
-    _userMessageReference = _messageRef.document(widget.profileUser.uid);
+    _userMessageReference =
+        _rootReference.collection(widget.uid).document(widget.myUid);
 
     _messageStream = _myMessageReference
-        .collection(widget.profileUser.uid)
+        .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(25)
         .snapshots();
@@ -56,156 +54,179 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
     return Scaffold(
         backgroundColor: Theme.of(context).primaryColor,
         appBar: ConversAppBar(
-          name: widget.profileUser.name,
-          thumbUrl: widget.profileUser.thumbUrl,
+          name: widget.userName,
+          thumbUrl: 'null',
           onlineStatus: null,
         ),
-        body: WillPopScope(
-          onWillPop: () async {
-            pushReplacement();
-            return true;
-          },
-          child: Column(
-            children: <Widget>[
-              Expanded(
-                  child: Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30)),
-                    color: Colors.white),
-                child: StreamBuilder<QuerySnapshot>(
-                    stream: _messageStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState != ConnectionState.waiting) {
-                        if (snapshot.data.documents != null) {
-                          List<Messages> _messageList = [];
-
-                          snapshot.data.documents.every((element) {
-                            _messageList.add(Messages(
-                                pushId: element.documentID,
-                                message: element['message'],
-                                time: element['timestamp'].toString(),
-                                seen: element['seen'],
-                                uid: element['uid']));
-                            return true;
+        body: Column(
+          children: <Widget>[
+            Expanded(
+                child: Container(
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30)),
+                  color: Colors.white),
+              child: StreamBuilder<QuerySnapshot>(
+                  stream: _messageStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.waiting) {
+                      return ListView.builder(
+                          reverse: true,
+                          padding: EdgeInsets.only(top: 10),
+                          itemCount: snapshot.data.documents.length,
+                          itemBuilder: (_, index) {
+                            return ClipRRect(
+                                child: Align(
+                                    alignment: snapshot.data.documents[index]
+                                                ['uid'] ==
+                                            widget.myUid
+                                        ? Alignment.topRight
+                                        : Alignment.topLeft,
+                                    child: Container(
+                                        margin: snapshot.data.documents[index]
+                                                    ['uid'] ==
+                                                widget.myUid
+                                            ? EdgeInsets.only(
+                                                top: 5,
+                                                left: 70,
+                                                right: 5,
+                                                bottom: 5,
+                                              )
+                                            : EdgeInsets.only(
+                                                top: 5,
+                                                left: 5,
+                                                right: 70,
+                                                bottom: 5,
+                                              ),
+                                        padding: EdgeInsets.all(9),
+                                        decoration: BoxDecoration(
+                                            color: Colors.deepOrangeAccent,
+                                            borderRadius:
+                                                BorderRadius.circular(18)),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            Text(
+                                              snapshot.data.documents[index]
+                                                  .data['message'],
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 9,
+                                            ),
+                                            Text(
+                                              snapshot.data.documents[index]
+                                                  .data['sentTime'],
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ))));
                           });
-
-                          return ListView.builder(
-                              reverse: true,
-                              padding: EdgeInsets.only(top: 10),
-                              itemCount: _messageList.length,
-                              itemBuilder: (_, index) {
-                                return ClipRRect(
-                                  child: ChatBuble(
-                                    message: _messageList[index].message,
-                                  ),
-                                );
-                              });
-                        } else {
-                          return Text('');
-                        }
-                      } else
-                        return Text('');
-                    }),
-              )),
-              Container(
-                padding: EdgeInsets.all(5),
-                color: Colors.white,
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        onChanged: (value) {
-                          _enteredMessage = value;
-                        },
-                        decoration: InputDecoration(
-                            focusColor: Colors.grey.shade100,
-                            focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade500)),
-                            enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade500)),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: EdgeInsets.all(9),
-                            border: InputBorder.none,
-                            prefixIcon: IconButton(
-                              onPressed: () {},
-                              icon: Icon(Icons.perm_media),
-                            ),
-                            hintText: 'Type here...'),
+                    } else
+                      return Text('');
+                  }),
+            )),
+            Container(
+              padding: EdgeInsets.all(5),
+              color: Colors.white,
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      onChanged: (value) {
+                        _enteredMessage = value;
+                      },
+                      decoration: InputDecoration(
+                          focusColor: Colors.grey.shade100,
+                          focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade500)),
+                          enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade500)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: EdgeInsets.all(9),
+                          border: InputBorder.none,
+                          prefixIcon: IconButton(
+                            onPressed: () {},
+                            icon: Icon(Icons.perm_media),
+                          ),
+                          hintText: 'Type here...'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 5,
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                        color: Colors.deepOrangeAccent,
+                        borderRadius: BorderRadius.circular(30)),
+                    child: IconButton(
+                      color: Colors.white,
+                      onPressed: () {
+                        sendMessage();
+                        _messageController.clear();
+                      },
+                      icon: Icon(
+                        Icons.send,
+                        size: 30,
                       ),
                     ),
-                    SizedBox(
-                      width: 5,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                          color: Colors.deepOrangeAccent,
-                          borderRadius: BorderRadius.circular(30)),
-                      child: IconButton(
-                        color: Colors.white,
-                        onPressed: () {
-                          sendMessage();
-                          _messageController.clear();
-                        },
-                        icon: Icon(
-                          Icons.send,
-                          size: 30,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
+                  ),
+                ],
+              ),
+            )
+          ],
         ));
   }
 
   void sendMessage() async {
-    var pushID = _myMessageReference
-        .collection(widget.profileUser.uid)
-        .document()
-        .documentID;
+    var timestamp = DateTime.now().microsecondsSinceEpoch;
+    var sentTime = TimeOfDay.now().format(context);
 
     _myMessageReference
-        .collection(widget.profileUser.uid)
-        .document(pushID)
+        .collection('messages')
+        .document(timestamp.toString())
         .setData({
       'message': _enteredMessage,
-      'timestamp': DateTime.now().microsecondsSinceEpoch,
+      'timestamp': timestamp,
       'seen': true,
-      'uid': widget.myUid
-    }).then((value) {
+      'uid': widget.myUid,
+      'sentTime': sentTime
+    }).whenComplete(() {
       _myMessageReference.setData({
-        widget.profileUser.uid: DateTime.now().microsecondsSinceEpoch,
-      });
+        'timestamp': timestamp,
+      }, merge: true);
     });
 
-    _userMessageReference.collection(widget.myUid).document(pushID).setData({
+    _userMessageReference
+        .collection(widget.myUid)
+        .document(timestamp.toString())
+        .setData({
       'message': _enteredMessage,
-      'timestamp': DateTime.now().microsecondsSinceEpoch,
+      'timestamp': timestamp,
       'seen': false,
-      'uid': widget.profileUser.uid
-    }).then((value) {
+      'uid': widget.uid,
+      'sentTime': sentTime
+    }).whenComplete(() {
       _userMessageReference.setData({
-        widget.myUid: DateTime.now().microsecondsSinceEpoch,
-      });
+        'timestamp': timestamp,
+      }, merge: true);
     });
-  }
-
-  void pushReplacement() {
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) {
-      dispose();
-      return Chats(
-        uid: widget.myUid,
-      );
-    }));
   }
 }

@@ -48,7 +48,7 @@ class CustomWidgets {
                     height: 5,
                   ),
                   Text(
-                    status,
+                    status == null ? 'fetching' : status,
                     style: TextStyle(
                         color: Colors.blueGrey,
                         fontSize: 18,

@@ -20,41 +20,16 @@ class _FriendsState extends State<Friends> {
   bool loading = true;
   CustomWidgets _customWidgets = CustomWidgets();
 
-  intiFriendsData() async {
-    await _friendsRef.once().then((value) {
-      if (value.value != null) {
-        value.value.forEach((key, value) {
-          userDataFromKey(key);
-        });
-      }
-    });
-    setState(() {
-      loading = false;
-    });
-  }
-
-  userDataFromKey(String key) async {
-    await _usersRef.child(key).once().then((value) {
-      setState(() {
-        _friendsList.add(Users(
-            name: value.value['name'],
-            imageUrl: value.value['imageUrl'],
-            thumbUrl: value.value['thumbUrl'],
-            status: value.value['status'],
-            uid: key));
-      });
-    });
-  }
-
   initRef() {
     _friendsRef = _rootRef.child('friends').child(widget.uid);
     _usersRef = _rootRef.child('Users');
+    _usersRef.keepSynced(true);
+    _friendsRef.keepSynced(true);
   }
 
   @override
   void initState() {
     initRef();
-    intiFriendsData();
     super.initState();
   }
 
@@ -70,27 +45,50 @@ class _FriendsState extends State<Friends> {
               color: Colors.white,
               borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30), topRight: Radius.circular(30))),
-          child: loading
-              ? Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _friendsList.length,
-                  itemBuilder: (_, index) {
-                    return GestureDetector(
-                        onTap: () {
-                          Navigator.push(context,
-                              MaterialPageRoute(builder: (_) {
-                            return ProfileScreen(
-                              userData: _friendsList[index],
-                              myUid: widget.uid,
-                            );
-                          }));
-                        },
-                        child: _customWidgets.getDetailedCard(
-                            _friendsList[index].name,
-                            _friendsList[index].status,
-                            _friendsList[index].thumbUrl));
-                  }),
+          child: StreamBuilder<Event>(
+              stream: _friendsRef.orderByKey().onValue,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  var _list = [];
+                  snapshot.data.snapshot.value
+                      .forEach((k, v) => _list.add((k)));
+
+                  return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: snapshot.data.snapshot.value.length,
+                      itemBuilder: (_, index) {
+                        return StreamBuilder<Event>(
+                            stream: _usersRef.child(_list[index]).onValue,
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(context,
+                                          MaterialPageRoute(builder: (_) {
+                                        return ProfileScreen(
+                                          userData: _friendsList[index],
+                                          myUid: widget.uid,
+                                        );
+                                      }));
+                                    },
+                                    child: _customWidgets.getDetailedCard(
+                                      snapshot.data.snapshot.value['name'],
+                                      snapshot.data.snapshot.value['status'],
+                                      snapshot.data.snapshot.value['thumbUrl'],
+                                    ));
+                              } else {
+                                return Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                            });
+                      });
+                } else {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+              }),
         ));
   }
 }
