@@ -1,14 +1,19 @@
-import 'package:chatapp/widgets/convers_appbar.dart';
+import 'package:chatapp/screens/profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class MessagingScreeen extends StatefulWidget {
   final myUid;
-  final userName, thumbnail, uid;
+  final userName, thumbnail, uid, status;
 
   const MessagingScreeen(
-      {Key key, this.myUid, this.thumbnail, this.uid, this.userName})
+      {Key key,
+      this.myUid,
+      this.thumbnail,
+      this.uid,
+      this.userName,
+      this.status})
       : super(key: key);
   @override
   _MessagingScreeenState createState() => _MessagingScreeenState();
@@ -44,29 +49,41 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
     super.initState();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  GlobalKey<ScaffoldState> _globalKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        key: _globalKey,
         backgroundColor: Theme.of(context).primaryColor,
-        appBar: ConversAppBar(
-          name: widget.userName,
-          thumbUrl: 'null',
-          onlineStatus: null,
+        appBar: AppBar(
+          title: Text(
+            widget.userName,
+            style: TextStyle(fontSize: 25),
+          ),
+          centerTitle: true,
+          elevation: 0,
+          actions: <Widget>[
+            IconButton(
+              icon: Icon(
+                Icons.more_horiz,
+              ),
+              onPressed: () {
+                getBottomSheet();
+              },
+            )
+          ],
         ),
         body: Column(
           children: <Widget>[
             Expanded(
                 child: Container(
               decoration: BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30)),
-                  color: Colors.white),
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30)),
+                color: Colors.white,
+              ),
               child: StreamBuilder<QuerySnapshot>(
                   stream: _messageStream,
                   builder: (context, snapshot) {
@@ -195,6 +212,186 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
         ));
   }
 
+  getBottomSheet() {
+    _globalKey.currentState.showBottomSheet((context) {
+      return Container(
+        height: 306,
+        width: double.infinity,
+        decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            )),
+        child: Column(
+          children: <Widget>[
+            SizedBox(
+              height: 20,
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) {
+                  return ProfileScreen(
+                    myUid: widget.myUid,
+                    name: widget.userName,
+                    uid: widget.uid,
+                    thumbUrl: widget.thumbnail,
+                    status: widget.status,
+                  );
+                }));
+              },
+              child: Container(
+                  margin: EdgeInsets.all(9),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Icon(
+                        Icons.person,
+                        color: Colors.red,
+                        size: 30,
+                      ),
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Text(
+                        'View Profile',
+                        style: TextStyle(
+                            color: Colors.red.withOpacity(0.9),
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )),
+            ),
+            GestureDetector(
+              onTap: () {},
+              child: Container(
+                  margin: EdgeInsets.all(9),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Icon(
+                        Icons.image,
+                        color: Colors.red,
+                        size: 30,
+                      ),
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Text(
+                        'Change Backgroud',
+                        style: TextStyle(
+                            color: Colors.red.withOpacity(0.9),
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )),
+            ),
+            GestureDetector(
+              onTap: () {
+                deleteForMe().whenComplete(() {
+                  Navigator.pop(context);
+                }).whenComplete(() => Navigator.pop(context));
+              },
+              child: Container(
+                  margin: EdgeInsets.all(9),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                        size: 30,
+                      ),
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Text(
+                        'Delete for me',
+                        style: TextStyle(
+                            color: Colors.red.withOpacity(0.9),
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )),
+            ),
+            GestureDetector(
+              onTap: () {
+                deleteForEveryOne().whenComplete(() {
+                  Navigator.pop(context);
+                }).whenComplete(() => Navigator.pop(context));
+              },
+              child: Container(
+                  margin: EdgeInsets.all(9),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Icon(
+                        Icons.delete_forever,
+                        color: Colors.red,
+                        size: 30,
+                      ),
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Text(
+                        'Delete for everyone',
+                        style: TextStyle(
+                            color: Colors.red.withOpacity(0.9),
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )),
+            ),
+            GestureDetector(
+              onTap: () {},
+              child: Container(
+                  margin: EdgeInsets.all(9),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Icon(
+                        Icons.block,
+                        color: Colors.red,
+                        size: 30,
+                      ),
+                      SizedBox(
+                        width: 18,
+                      ),
+                      Text(
+                        'Block',
+                        style: TextStyle(
+                            color: Colors.red.withOpacity(0.9),
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   void sendMessage() async {
     var timestamp = DateTime.now().microsecondsSinceEpoch;
     var sentTime = TimeOfDay.now().format(context);
@@ -215,7 +412,7 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
     });
 
     _userMessageReference
-        .collection(widget.myUid)
+        .collection('messages')
         .document(timestamp.toString())
         .setData({
       'message': _enteredMessage,
@@ -228,5 +425,24 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
         'timestamp': timestamp,
       }, merge: true);
     });
+  }
+
+  Future deleteForMe() async {
+    _myMessageReference.collection('messages').getDocuments().then((value) {
+      for (DocumentSnapshot doc in value.documents) {
+        doc.reference.delete();
+      }
+    }).whenComplete(() => _myMessageReference.delete());
+  }
+
+  Future deleteForEveryOne() async {
+    deleteForMe().whenComplete(() => _userMessageReference
+            .collection('messages')
+            .getDocuments()
+            .then((value) {
+          for (DocumentSnapshot doc in value.documents) {
+            doc.reference.delete();
+          }
+        }).whenComplete(() => _userMessageReference.delete()));
   }
 }

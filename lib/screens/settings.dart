@@ -1,14 +1,15 @@
 import 'dart:io';
 
 import 'package:chatapp/Services/Authentication.dart';
-import 'package:chatapp/screens/LoginScreen.dart';
-import 'package:chatapp/widgets/custom_widgets.dart';
+import 'package:chatapp/screens/fullscreen_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
+import 'package:streaming_shared_preferences/streaming_shared_preferences.dart';
 
 class Settings extends StatefulWidget {
   final String uid;
@@ -19,18 +20,15 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
-  CustomWidgets _customWidgets = CustomWidgets();
   File _file;
   StorageReference _storage =
       FirebaseStorage.instance.ref().child('profile_pictures');
   FirebaseUser _firebaseUser;
-  DatabaseReference _userRef =
-      FirebaseDatabase.instance.reference().child('Users');
+  DocumentReference _usersRef;
   FirebaseAuth _auth = FirebaseAuth.instance;
 
-  initUserData() {
-    _userRef.child(widget.uid).keepSynced(true);
-    _userRef = _userRef.child(widget.uid);
+  initUserData() async {
+    _usersRef = Firestore.instance.collection('Users').document(widget.uid);
     _auth.currentUser().then((value) => _firebaseUser = value);
   }
 
@@ -43,307 +41,360 @@ class _SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).primaryColor,
-      appBar: _customWidgets.getCustomAppBar('Settings'),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30), topRight: Radius.circular(30))),
-        child: SingleChildScrollView(
-          child: Column(
-            children: <Widget>[
-              SizedBox(
-                height: 30,
-              ),
-              StreamBuilder(
-                stream: _userRef.onValue,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
-                      child: Column(
-                        children: <Widget>[
-                          SizedBox(
-                            height: 300,
-                          ),
-                          CircularProgressIndicator(),
-                          SizedBox(
-                            height: 30,
-                          ),
-                        ],
-                      ),
-                    );
-                  } else {
-                    return Column(children: <Widget>[
-                      Stack(
-                        children: <Widget>[
-                          Container(
-                            alignment: Alignment.center,
-                            child: Column(
-                              children: <Widget>[
-                                CircleAvatar(
+        backgroundColor: Theme.of(context).primaryColor,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30), topRight: Radius.circular(30))),
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: _usersRef.snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              } else {
+                return SingleChildScrollView(
+                  child: Column(children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Stack(
+                          overflow: Overflow.visible,
+                          children: <Widget>[
+                            Container(
+                              margin: EdgeInsets.only(top: 18, left: 10),
+                              alignment: Alignment.topLeft,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  if (snapshot.data.data['imageUrl'] !=
+                                      'null') {
+                                    Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) {
+                                      return FullScreenImageView(
+                                        url: snapshot.data.data['imageUrl'],
+                                      );
+                                    }));
+                                  }
+                                },
+                                child: CircleAvatar(
                                   backgroundColor: Colors.white,
-                                  backgroundImage: (snapshot.data.snapshot
-                                              .value['imageUrl'] ==
+                                  backgroundImage: (snapshot
+                                              .data.data['imageUrl'] ==
                                           'null')
                                       ? AssetImage('assets/circular_avatar.png')
-                                      : NetworkImage(snapshot
-                                          .data.snapshot.value['imageUrl']),
-                                  minRadius: 10,
-                                  maxRadius: 100,
+                                      : NetworkImage(
+                                          snapshot.data.data['imageUrl']),
+                                  minRadius: 50,
+                                  maxRadius: 50,
                                 ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 10,
-                            right: 115,
-                            child: IconButton(
-                              icon: Icon(
-                                Icons.photo_camera,
-                                color: Colors.deepOrangeAccent,
-                                size: 50,
                               ),
-                              onPressed: () async {
-                                print('pressed');
-                                _file = await FilePicker.getFile(
-                                  type: FileType.custom,
-                                  allowedExtensions: ['jpg', 'png', 'jpeg'],
-                                );
-                                if (_file != null) {
-                                  _storage
-                                      .child(widget.uid)
-                                      .putFile(_file)
-                                      .onComplete
-                                      .then((value) {
-                                    value.ref.getDownloadURL().then((value) =>
-                                        _userRef.child('imageUrl').set(value));
-                                  });
-                                }
-                              },
                             ),
-                          )
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Container(
-                            padding: EdgeInsets.all(10),
-                            child: Text(
-                              snapshot.data.snapshot.value['name'],
+                            Positioned(
+                              bottom: -10,
+                              left: 70,
+                              child: IconButton(
+                                icon: Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.blueGrey,
+                                  size: 36,
+                                ),
+                                onPressed: () {
+                                  changeProfilePicture();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(
+                      height: 18,
+                    ),
+                    GestureDetector(
+                        onTap: () {
+                          getDymamicSheet('name');
+                        },
+                        child: getContainer(snapshot.data.data['name'])),
+                    GestureDetector(
+                        onTap: () {
+                          getDymamicSheet('status');
+                        },
+                        child: getContainer(snapshot.data.data['status'])),
+                    GestureDetector(
+                        onTap: () {
+                          getEmailSheet();
+                        },
+                        child: getContainer(_firebaseUser.email)),
+                    GestureDetector(
+                        onTap: () async {
+                          await AuthServices()
+                              .resetPassword(_firebaseUser.email);
+                          Scaffold.of(context).showSnackBar(SnackBar(
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(18),
+                              topRight: Radius.circular(18),
+                            )),
+                            backgroundColor: Colors.deepOrangeAccent,
+                            content: Text(
+                              'A reset link has sent to your email',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 21),
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              String updateName;
-                              showBottomSheet(
-                                  backgroundColor:
-                                      Colors.orange.withOpacity(0.5),
-                                  context: (context),
-                                  builder: (_) {
-                                    return Container(
-                                      padding: EdgeInsets.all(18),
-                                      height: 180,
-                                      decoration: BoxDecoration(
-                                          color: Colors.orangeAccent,
-                                          borderRadius: BorderRadius.only(
-                                              topLeft: Radius.circular(30),
-                                              topRight: Radius.circular(30))),
-                                      child: Column(
-                                        children: <Widget>[
-                                          Text(
-                                            'Change name',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 21),
-                                          ),
-                                          TextField(
-                                            onChanged: (value) {
-                                              updateName = value;
-                                            },
-                                            decoration: InputDecoration(
-                                                border: InputBorder.none,
-                                                hintText: 'Enter your name',
-                                                hintStyle: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 18,
-                                                )),
-                                          ),
-                                          SizedBox(
-                                            height: 18,
-                                          ),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceEvenly,
-                                            children: <Widget>[
-                                              FlatButton(
-                                                color: Colors.redAccent,
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                child: Text('Cancel'),
-                                              ),
-                                              FlatButton(
-                                                color: Colors.greenAccent,
-                                                onPressed: () {
-                                                  _userRef
-                                                      .child('name')
-                                                      .set(updateName);
-                                                  Navigator.pop(context);
-                                                },
-                                                child: Text('Update'),
-                                              )
-                                            ],
-                                          )
-                                        ],
-                                      ),
-                                    );
-                                  });
-
-                              /* showDialog(
-                                  context: context,
-                                  child: CupertinoAlertDialog(
-                                    title: Text('Change Name'),
-                                    content: Card(
-                                      child: TextField(
-                                        onChanged: (value) {
-                                          updatedName = value;
-                                        },
-                                        decoration: InputDecoration(),
-                                      ),
-                                    ),
-                                    actions: <Widget>[
-                                      CupertinoDialogAction(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                          child: Text('Cancel')),
-                                      CupertinoDialogAction(
-                                          onPressed: () async {
-                                            if (updatedName.length > 3) {
-                                              await _userRef
-                                                  .update({'name': updatedName});
-                                              Navigator.pop(context);
-                                            }
-                                          },
-                                          child: Text('Change')),
-                                    ],
-                                  )); */
-                            },
-                            icon: Icon(Icons.edit),
-                          )
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Container(
-                            padding: EdgeInsets.all(10),
-                            child: Text(
-                              snapshot.data.snapshot.value['status'],
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 21),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              String updatedStatus;
-                              showDialog(
-                                  context: context,
-                                  child: CupertinoAlertDialog(
-                                    title: Text('Change Status'),
-                                    content: Card(
-                                      child: TextField(
-                                        onChanged: (value) {
-                                          updatedStatus = value;
-                                        },
-                                        decoration: InputDecoration(),
-                                      ),
-                                    ),
-                                    actions: <Widget>[
-                                      CupertinoDialogAction(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                          child: Text('Cancel')),
-                                      CupertinoDialogAction(
-                                          onPressed: () async {
-                                            if (updatedStatus.length > 0) {
-                                              await _userRef.update(
-                                                  {'status': updatedStatus});
-                                              Navigator.pop(context);
-                                            }
-                                          },
-                                          child: Text('Change')),
-                                    ],
-                                  ));
-                            },
-                            icon: Icon(Icons.edit),
-                          )
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Container(
-                            padding: EdgeInsets.all(10),
-                            child: Text(
-                              _firebaseUser.email,
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {},
-                            icon: Icon(Icons.edit),
-                          )
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Container(
-                            padding: EdgeInsets.all(10),
-                            child: Text(
-                              'xxxxxxxx',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {},
-                            icon: Icon(Icons.edit),
-                          )
-                        ],
-                      ),
-                    ]);
-                  }
-                },
-              ),
-              RaisedButton(
-                onPressed: () {
-                  AuthServices().logout();
-                  Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (_) {
-                    return LoginPage();
-                  }));
-                },
-                child: Text(
-                  'Logout',
-                  style: TextStyle(color: Colors.white),
-                ),
-                color: Colors.redAccent,
-              )
-            ],
+                          ));
+                        },
+                        child: getContainer('Change Password'))
+                  ]),
+                );
+              }
+            },
           ),
-        ),
+        ));
+  }
+
+  Widget getContainer(String text) {
+    return Container(
+      padding: EdgeInsets.all(18),
+      margin: EdgeInsets.all(9),
+      decoration: BoxDecoration(
+          color: Colors.grey.shade200, borderRadius: BorderRadius.circular(18)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Container(
+            child: Text(
+              text,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          Icon(
+            Icons.edit,
+            size: 18,
+            color: Colors.deepOrangeAccent,
+          ),
+        ],
       ),
     );
+  }
+
+  changeProfilePicture() async {
+    _file = await FilePicker.getFile(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'png', 'jpeg'],
+    );
+    if (_file != null) {
+      try {
+        _storage.child(widget.uid).putFile(_file).onComplete.then((value) {
+          value.ref.getDownloadURL().then((value) async {
+            await _usersRef.setData({'imageUrl': value}, merge: true);
+            StreamingSharedPreferences _pref =
+                await StreamingSharedPreferences.instance;
+            await _pref.setString('IMAGE', value);
+            print(_pref.getString('IMAGE', defaultValue: '').getValue());
+            Phoenix.rebirth(context);
+          });
+        });
+      } catch (e) {
+        print(e);
+      }
+    }
+  }
+
+  getEmailSheet() {
+    String email;
+    String password;
+
+    showBottomSheet(
+        context: (context),
+        builder: (_) {
+          return Container(
+            height: 360,
+            padding: EdgeInsets.all(9),
+            decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30))),
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Text(
+                    'Change Email',
+                    style: TextStyle(
+                      color: Colors.deepOrangeAccent,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 21,
+                    ),
+                  ),
+                ),
+                TextField(
+                  onChanged: (value) {
+                    email = value;
+                  },
+                  decoration: InputDecoration(
+                      contentPadding: EdgeInsets.only(left: 18),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(
+                            color: Colors.grey,
+                          )),
+                      border: InputBorder.none,
+                      hintText: 'Enter your new email',
+                      hintStyle: TextStyle(
+                        color: Colors.deepOrangeAccent,
+                        fontSize: 18,
+                      )),
+                ),
+                SizedBox(
+                  height: 18,
+                ),
+                TextField(
+                  onChanged: (value) {
+                    password = value;
+                  },
+                  decoration: InputDecoration(
+                      contentPadding: EdgeInsets.only(left: 18),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(
+                            color: Colors.grey,
+                          )),
+                      border: InputBorder.none,
+                      hintText: 'Enter your password',
+                      hintStyle: TextStyle(
+                        color: Colors.deepOrangeAccent,
+                        fontSize: 18,
+                      )),
+                ),
+                SizedBox(
+                  height: 18,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    FlatButton(
+                      color: Colors.red.withOpacity(0.7),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    FlatButton(
+                      color: Colors.green.withOpacity(0.7),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      onPressed: () async {
+                        await AuthServices().changeEmail(email, password);
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'Update',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(
+                  height: 18,
+                ),
+              ],
+            ),
+          );
+        });
+  }
+
+  getDymamicSheet(which) {
+    String text;
+    showBottomSheet(
+        context: (context),
+        builder: (_) {
+          return Container(
+            height: 270,
+            decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                )),
+            child: Column(
+              children: <Widget>[
+                Container(
+                  margin: EdgeInsets.symmetric(vertical: 18),
+                  child: Text(
+                    'Update $which',
+                    style: TextStyle(
+                        color: Colors.deepOrangeAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 21),
+                  ),
+                ),
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 10),
+                  child: TextField(
+                    onChanged: (value) {
+                      text = value;
+                    },
+                    decoration: InputDecoration(
+                        contentPadding: EdgeInsets.only(left: 9),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(color: Colors.grey.shade900),
+                        ),
+                        border: InputBorder.none,
+                        hintText: 'Enter your $which',
+                        hintStyle: TextStyle(
+                          color: Colors.deepOrangeAccent,
+                          fontSize: 18,
+                        )),
+                  ),
+                ),
+                SizedBox(
+                  height: 30,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    FlatButton(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      color: Colors.redAccent.withOpacity(0.7),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text('Cancel'),
+                    ),
+                    FlatButton(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      color: Colors.greenAccent.withOpacity(0.7),
+                      onPressed: () {
+                        _usersRef.setData({'$which': text}, merge: true);
+                        Navigator.pop(context);
+                      },
+                      child: Text('Update'),
+                    )
+                  ],
+                )
+              ],
+            ),
+          );
+        });
   }
 }

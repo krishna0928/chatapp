@@ -1,8 +1,7 @@
 import 'package:chatapp/Services/Authentication.dart';
-import 'package:chatapp/screens/LoginScreen.dart';
-import 'package:chatapp/screens/main_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -14,6 +13,7 @@ class _SignUpPageState extends State<SignUpPage> {
   bool hidePassword = true;
   bool loading = false;
   final _formKey = GlobalKey<FormState>();
+  String errorMessage = '';
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +59,6 @@ class _SignUpPageState extends State<SignUpPage> {
                           padding: EdgeInsets.all(30),
                           child: Column(
                             children: <Widget>[
-                              SizedBox(
-                                height: 50,
-                              ),
                               Container(
                                 decoration: BoxDecoration(
                                     color: Colors.white70,
@@ -158,11 +155,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                                 ),
                                                 onPressed: () {
                                                   setState(() {
-                                                    if (hidePassword) {
-                                                      hidePassword = false;
-                                                    } else {
-                                                      hidePassword = true;
-                                                    }
+                                                    hidePassword =
+                                                        !hidePassword;
                                                   });
                                                 },
                                               ),
@@ -196,11 +190,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                                 ),
                                                 onPressed: () {
                                                   setState(() {
-                                                    if (hidePassword) {
-                                                      hidePassword = false;
-                                                    } else {
-                                                      hidePassword = true;
-                                                    }
+                                                    hidePassword =
+                                                        !hidePassword;
                                                   });
                                                 },
                                               ),
@@ -227,11 +218,6 @@ class _SignUpPageState extends State<SignUpPage> {
                                   child: FlatButton(
                                       onPressed: () {
                                         if (_formKey.currentState.validate()) {
-                                          print(loading);
-
-                                          setState(() {
-                                            loading = true;
-                                          });
                                           createUser();
                                         }
                                       },
@@ -250,71 +236,23 @@ class _SignUpPageState extends State<SignUpPage> {
                               ),
                               FlatButton(
                                 onPressed: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => LoginPage()),
-                                  );
+                                  Navigator.pop(context);
                                 },
                                 child: Text(
-                                  "Already have An Account? Login here!",
+                                  "Having an Account? Login here !",
                                   style: TextStyle(
                                       color: Colors.grey, fontSize: 16.0),
                                 ),
                               ),
                               SizedBox(
-                                height: 20,
+                                height: 10,
                               ),
                               Text(
-                                "OR Continue with",
+                                errorMessage,
                                 style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 14.0,
+                                    color: Colors.red,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(
-                                height: 20,
-                              ),
-                              Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(50),
-                                          color: Colors.blueGrey),
-                                      child: Center(
-                                        child: Text(
-                                          "Google",
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: 30,
-                                  ),
-                                  Expanded(
-                                    child: Container(
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(50),
-                                          color: Colors.black),
-                                      child: Center(
-                                        child: Text(
-                                          "Github",
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ],
                               )
                             ],
                           ),
@@ -329,18 +267,25 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void createUser() async {
-    dynamic result = await AuthServices()
-        .registerWithEmailAndPass(email, password, userName);
+    setState(() {
+      loading = true;
+    });
+    try {
+      final result = await AuthServices()
+          .registerWithEmailAndPass(email, password, userName);
 
-    if (result != null) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) {
-        return MainPage(
-          uid: result,
-        );
-      }));
-    } else {
+      if (result != true) {
+        setState(() {
+          loading = false;
+          errorMessage = result.toString();
+        });
+      } else {
+        Phoenix.rebirth(context);
+      }
+    } catch (e) {
       setState(() {
         loading = false;
+        errorMessage = e.toString();
       });
     }
   }
