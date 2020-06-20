@@ -1,5 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatapp/screens/profile_screen.dart';
-import 'package:chatapp/widgets/custom_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +13,6 @@ class FriendRequest extends StatefulWidget {
 }
 
 class _FriendRequestState extends State<FriendRequest> {
-  CustomWidgets _customWidgets = CustomWidgets();
   CollectionReference _usersRef;
   CollectionReference _friendReqRef;
 
@@ -68,10 +67,36 @@ class _FriendRequestState extends State<FriendRequest> {
                                         );
                                       }));
                                     },
-                                    child: _customWidgets.getDetailedCard(
-                                      snapshot.data.data['name'],
-                                      'Request ${reqSnap.data.documents[index].data['reqType']}',
-                                      snapshot.data.data['thumbUrl'],
+                                    child: Container(
+                                      margin: EdgeInsets.all(9),
+                                      padding: EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                          color: Colors.grey.shade200,
+                                          borderRadius:
+                                              BorderRadius.circular(30)),
+                                      child: ListTile(
+                                          title: Text(
+                                            snapshot.data.data['name'],
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                              'Request : ${reqSnap.data.documents[index]['reqType']} '),
+                                          leading: CircleAvatar(
+                                            maxRadius: 27,
+                                            minRadius: 27,
+                                            backgroundColor: Colors.white,
+                                            backgroundImage: snapshot.data
+                                                        .data['imageUrl'] ==
+                                                    'null'
+                                                ? AssetImage(
+                                                    'assets/circular_avatar.png')
+                                                : CachedNetworkImageProvider(
+                                                    snapshot
+                                                        .data.data['imageUrl']),
+                                          )),
                                     ));
                               } else {
                                 return Center(

@@ -1,3 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatapp/screens/fullscreen_image.dart';
 import 'package:chatapp/screens/message_screen.dart';
 import 'package:chatapp/widgets/custom_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -73,7 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         appBar: CustomWidgets().getCustomAppBar('Profile'),
         backgroundColor: Theme.of(context).primaryColor,
         body: Container(
-          width: double.infinity,
           height: double.infinity,
           decoration: BoxDecoration(
               color: Colors.white,
@@ -83,45 +84,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
               )),
           child: SingleChildScrollView(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                SizedBox(
-                  height: 30,
+                Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (widget.thumbUrl != 'null') {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) {
+                          return FullScreenImageView(
+                            url: widget.thumbUrl,
+                          );
+                        }));
+                      }
+                    },
+                    child: CircleAvatar(
+                      minRadius: 90,
+                      maxRadius: 90,
+                      backgroundColor: Colors.white,
+                      backgroundImage: (widget.thumbUrl == 'null')
+                          ? AssetImage('assets/circular_avatar.png')
+                          : CachedNetworkImageProvider(widget.thumbUrl),
+                    ),
+                  ),
                 ),
-                CircleAvatar(
-                  minRadius: 90,
-                  maxRadius: 90,
-                  backgroundColor: Colors.white,
-                  backgroundImage: (widget.thumbUrl == 'null')
-                      ? AssetImage('assets/circular_avatar.png')
-                      : NetworkImage(widget.thumbUrl),
+                Container(
+                  margin: EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      widget.name,
+                      style:
+                          TextStyle(color: Colors.grey.shade900, fontSize: 25),
+                    ),
+                  ),
                 ),
-                SizedBox(
-                  height: 15,
-                ),
-                Text(
-                  widget.name,
-                  style: TextStyle(
-                      color: Colors.blueGrey,
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold),
-                ),
-                SizedBox(
-                  height: 15,
-                ),
-                Text(
-                  widget.status,
-                  style: TextStyle(
-                      color: Colors.blueGrey,
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold),
-                ),
-                SizedBox(
-                  height: 30,
+                Container(
+                  margin: EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      widget.status,
+                      style:
+                          TextStyle(color: Colors.grey.shade900, fontSize: 18),
+                    ),
+                  ),
                 ),
                 (loading)
-                    ? SizedBox(
-                        height: 100,
-                        width: 100,
+                    ? Center(
                         child: Center(
                           child: CircularProgressIndicator(),
                         ),
@@ -136,132 +152,148 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget getWidgetAccordingToState(String state) {
     switch (state) {
       case 'notFriends':
-        return RaisedButton(
-          padding: EdgeInsets.all(12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          onPressed: () {
-            sendFriendRq();
-          },
-          child: Text(
-            'Send Request',
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        return Container(
+          margin: EdgeInsets.only(top: 36),
+          alignment: Alignment.center,
+          child: RaisedButton(
+            padding: EdgeInsets.all(12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            onPressed: () {
+              sendFriendRq();
+            },
+            child: Text(
+              'Send Request',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+            color: Colors.deepOrangeAccent,
           ),
-          color: Colors.deepOrangeAccent,
         );
 
       case 'received':
-        return Column(
-          children: <Widget>[
-            RaisedButton(
-              padding: EdgeInsets.all(12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
-              onPressed: () {
-                acceptRq();
-              },
-              child: Text(
-                'Accept Request',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+        return Container(
+          alignment: Alignment.center,
+          margin: EdgeInsets.only(top: 36),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              RaisedButton(
+                padding: EdgeInsets.all(12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+                onPressed: () {
+                  acceptRq();
+                },
+                child: Text(
+                  'Accept Request',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+                color: Colors.deepOrangeAccent,
               ),
-              color: Colors.deepOrangeAccent,
-            ),
-            SizedBox(
-              height: 18,
-            ),
-            RaisedButton(
-              padding: EdgeInsets.all(12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
-              onPressed: () {
-                cancelRq();
-              },
-              child: Text(
-                'Decline Request',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+              RaisedButton(
+                padding: EdgeInsets.all(12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+                onPressed: () {
+                  cancelRq();
+                },
+                child: Text(
+                  'Decline Request',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+                color: Colors.deepOrangeAccent,
               ),
-              color: Colors.deepOrangeAccent,
-            ),
-          ],
+            ],
+          ),
         );
 
       case 'sent':
-        return RaisedButton(
-          padding: EdgeInsets.all(12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          onPressed: () async {
-            await cancelRq();
-            setState(() {
-              currentState = 'notFriends';
-            });
-          },
-          child: Text(
-            'Cancel Request',
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        return Container(
+          alignment: Alignment.center,
+          margin: EdgeInsets.only(top: 36),
+          child: RaisedButton(
+            padding: EdgeInsets.all(12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            onPressed: () async {
+              await cancelRq();
+              setState(() {
+                currentState = 'notFriends';
+              });
+            },
+            child: Text(
+              'Cancel Request',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+            color: Colors.deepOrangeAccent,
           ),
-          color: Colors.deepOrangeAccent,
         );
 
       case 'friends':
-        return Column(
-          children: <Widget>[
-            RaisedButton(
-              padding: EdgeInsets.all(12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
-              onPressed: () {
-                unFriend();
-              },
-              child: Text(
-                'Un-Friend',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+        return Container(
+          alignment: Alignment.center,
+          margin: EdgeInsets.only(top: 36),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              RaisedButton(
+                padding: EdgeInsets.all(12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+                onPressed: () {
+                  unFriend();
+                },
+                child: Text(
+                  'Un-Friend',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+                color: Colors.deepOrangeAccent,
               ),
-              color: Colors.deepOrangeAccent,
-            ),
-            SizedBox(
-              height: 18,
-            ),
-            RaisedButton(
-              padding: EdgeInsets.all(12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
-              onPressed: () async {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (_) {
-                  return MessagingScreeen(
-                    myUid: widget.myUid,
-                    userName: widget.name,
-                    thumbnail: widget.thumbUrl,
-                    uid: widget.uid,
-                  );
-                }));
-              },
-              child: Text(
-                'Message',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+              RaisedButton(
+                padding: EdgeInsets.all(12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+                onPressed: () async {
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (_) {
+                    return MessagingScreeen(
+                      myUid: widget.myUid,
+                      userName: widget.name,
+                      thumbnail: widget.thumbUrl,
+                      uid: widget.uid,
+                    );
+                  }));
+                },
+                child: Text(
+                  'Message',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+                color: Colors.deepOrangeAccent,
               ),
-              color: Colors.deepOrangeAccent,
-            ),
-          ],
+            ],
+          ),
         );
 
       default:
-        return Text('');
+        return Container();
     }
   }
 

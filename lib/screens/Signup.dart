@@ -208,29 +208,25 @@ class _SignUpPageState extends State<SignUpPage> {
                               SizedBox(
                                 height: 40,
                               ),
-                              Container(
-                                height: 50,
-                                margin: EdgeInsets.symmetric(horizontal: 50),
-                                decoration: BoxDecoration(
+                              RaisedButton(
+                                  padding: EdgeInsets.symmetric(vertical: 12 , horizontal: 27),
+                                  color: Colors.deepOrangeAccent,
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(50),
-                                    color: Colors.orange[700]),
-                                child: Center(
-                                  child: FlatButton(
-                                      onPressed: () {
-                                        if (_formKey.currentState.validate()) {
-                                          createUser();
-                                        }
-                                      },
-                                      child: Text(
-                                        "Register",
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 1.0,
-                                            fontSize: 16.0),
-                                      )),
-                                ),
-                              ),
+                                  ),
+                                  onPressed: () {
+                                    if (_formKey.currentState.validate()) {
+                                      createUser();
+                                    }
+                                  },
+                                  child: Text(
+                                    "Register",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.0,
+                                        fontSize: 16.0),
+                                  )),
                               SizedBox(
                                 height: 20,
                               ),

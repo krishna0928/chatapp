@@ -1,5 +1,5 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatapp/screens/profile_screen.dart';
-import 'package:chatapp/widgets/custom_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -12,7 +12,6 @@ class Friends extends StatefulWidget {
 }
 
 class _FriendsState extends State<Friends> {
-  CustomWidgets _customWidgets = CustomWidgets();
   CollectionReference _usersRef;
   CollectionReference _friendReqRef;
 
@@ -53,25 +52,50 @@ class _FriendsState extends State<Friends> {
                                 .snapshots(),
                             builder: (context, snapshot) {
                               if (snapshot.hasData) {
-                                return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(context,
-                                          MaterialPageRoute(builder: (_) {
-                                        return ProfileScreen(
-                                          name: snapshot.data.data['name'],
-                                          status: snapshot.data.data['status'],
-                                          thumbUrl:
-                                              snapshot.data.data['thumbUrl'],
-                                          uid: snapshot.data.documentID,
-                                          myUid: widget.uid,
-                                        );
-                                      }));
-                                    },
-                                    child: _customWidgets.getDetailedCard(
-                                      snapshot.data.data['name'],
-                                      'Since ${friendSnap.data.documents[index].data['timestamp']}',
-                                      snapshot.data.data['thumbUrl'],
-                                    ));
+                                return Container(
+                                    margin: EdgeInsets.all(9),
+                                    padding: EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius:
+                                            BorderRadius.circular(30)),
+                                    child: ListTile(
+                                        onTap: () {
+                                          Navigator.push(context,
+                                              MaterialPageRoute(builder: (_) {
+                                            return ProfileScreen(
+                                              name: snapshot.data.data['name'],
+                                              status:
+                                                  snapshot.data.data['status'],
+                                              thumbUrl: snapshot
+                                                  .data.data['imageUrl'],
+                                              uid: snapshot.data.documentID,
+                                              myUid: widget.uid,
+                                            );
+                                          }));
+                                        },
+                                        title: Text(
+                                          snapshot.data.data['name'],
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                            'Since ${DateTime.fromMicrosecondsSinceEpoch(friendSnap.data.documents[index].data['timestamp']).day}/${DateTime.fromMicrosecondsSinceEpoch(friendSnap.data.documents[index].data['timestamp']).month}/${DateTime.fromMicrosecondsSinceEpoch(friendSnap.data.documents[index].data['timestamp']).year}'),
+                                        leading: CircleAvatar(
+                                          maxRadius: 27,
+                                          minRadius: 27,
+                                          backgroundColor: Colors.white,
+                                          backgroundImage: snapshot
+                                                      .data.data['imageUrl'] ==
+                                                  'null'
+                                              ? AssetImage(
+                                                  'assets/circular_avatar.png')
+                                              : CachedNetworkImageProvider(
+                                                  snapshot
+                                                      .data.data['imageUrl']),
+                                        )));
                               } else {
                                 return Center(
                                   child: CircularProgressIndicator(),

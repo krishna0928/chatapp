@@ -16,6 +16,7 @@ Future<void> main() async {
   final uid = preferences.getString('UID', defaultValue: 'null');
   final imageUrl = preferences.getString('IMAGE', defaultValue: 'null');
   final name = preferences.getString('NAME', defaultValue: 'null');
+  final darkTheme = preferences.getBool('DARKTHEME', defaultValue: false);
 
   runApp(
     Phoenix(
@@ -24,6 +25,7 @@ Future<void> main() async {
         uid: uid,
         imageUrl: imageUrl,
         name: name,
+        darkTheme: darkTheme,
       ),
       theme: ThemeData(
           primaryColor: Colors.deepOrangeAccent,
@@ -35,9 +37,10 @@ Future<void> main() async {
 }
 
 class Home extends StatefulWidget {
-  final Preference uid, imageUrl, name;
+  final Preference uid, imageUrl, name, darkTheme;
 
-  const Home({Key key, this.uid, this.imageUrl, this.name}) : super(key: key);
+  const Home({Key key, this.uid, this.imageUrl, this.name, this.darkTheme})
+      : super(key: key);
   @override
   _HomeState createState() => _HomeState();
 }
@@ -54,9 +57,11 @@ class _HomeState extends State<Home> {
       return LoginPage();
     } else {
       return MainPage(
-          uid: widget.uid.getValue(),
-          imageUrl: widget.imageUrl.getValue(),
-          name: widget.name.getValue());
+        uid: widget.uid.getValue(),
+        imageUrl: widget.imageUrl.getValue(),
+        name: widget.name.getValue(),
+        darkTheme: widget.darkTheme.getValue(),
+      );
     }
   }
 }

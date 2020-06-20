@@ -162,29 +162,26 @@ class _LoginPageState extends State<LoginPage> {
                                     fontWeight: FontWeight.bold),
                               ),
                               SizedBox(height: 30),
-                              Container(
-                                height: 50,
-                                margin: EdgeInsets.symmetric(horizontal: 50),
-                                decoration: BoxDecoration(
+                              RaisedButton(
+                                  color: Colors.deepOrangeAccent,
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 27, vertical: 12),
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(50),
-                                    color: Colors.orange[700]),
-                                child: Center(
-                                  child: FlatButton(
-                                      onPressed: () {
-                                        if (_formKey.currentState.validate()) {
-                                          signin();
-                                        }
-                                      },
-                                      child: Text(
-                                        "Login",
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            letterSpacing: 1.0),
-                                      )),
-                                ),
-                              ),
+                                  ),
+                                  onPressed: () {
+                                    if (_formKey.currentState.validate()) {
+                                      signin();
+                                    }
+                                  },
+                                  child: Text(
+                                    "Login",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        letterSpacing: 1.0),
+                                  )),
                               SizedBox(
                                 height: 20,
                               ),

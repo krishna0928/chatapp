@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chatapp/Services/Authentication.dart';
 import 'package:chatapp/screens/fullscreen_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,8 +14,9 @@ import 'package:streaming_shared_preferences/streaming_shared_preferences.dart';
 
 class Settings extends StatefulWidget {
   final String uid;
+  final bool darkTheme;
 
-  const Settings({Key key, this.uid}) : super(key: key);
+  const Settings({Key key, this.uid, this.darkTheme}) : super(key: key);
   @override
   _SettingsState createState() => _SettingsState();
 }
@@ -26,10 +28,12 @@ class _SettingsState extends State<Settings> {
   FirebaseUser _firebaseUser;
   DocumentReference _usersRef;
   FirebaseAuth _auth = FirebaseAuth.instance;
+  StreamingSharedPreferences _pref;
 
   initUserData() async {
     _usersRef = Firestore.instance.collection('Users').document(widget.uid);
-    _auth.currentUser().then((value) => _firebaseUser = value);
+    await _auth.currentUser().then((value) => _firebaseUser = value);
+    _pref = await StreamingSharedPreferences.instance;
   }
 
   @override
@@ -87,7 +91,7 @@ class _SettingsState extends State<Settings> {
                                               .data.data['imageUrl'] ==
                                           'null')
                                       ? AssetImage('assets/circular_avatar.png')
-                                      : NetworkImage(
+                                      : CachedNetworkImageProvider(
                                           snapshot.data.data['imageUrl']),
                                   minRadius: 50,
                                   maxRadius: 50,
@@ -119,17 +123,17 @@ class _SettingsState extends State<Settings> {
                         onTap: () {
                           getDymamicSheet('name');
                         },
-                        child: getContainer(snapshot.data.data['name'])),
+                        child: getApproprateTile(snapshot.data.data['name'])),
                     GestureDetector(
                         onTap: () {
                           getDymamicSheet('status');
                         },
-                        child: getContainer(snapshot.data.data['status'])),
+                        child: getApproprateTile(snapshot.data.data['status'])),
                     GestureDetector(
                         onTap: () {
                           getEmailSheet();
                         },
-                        child: getContainer(_firebaseUser.email)),
+                        child: getApproprateTile(_firebaseUser.email)),
                     GestureDetector(
                         onTap: () async {
                           await AuthServices()
@@ -150,7 +154,40 @@ class _SettingsState extends State<Settings> {
                             ),
                           ));
                         },
-                        child: getContainer('Change Password'))
+                        child: getApproprateTile('Change Password')),
+                    Container(
+                      margin: EdgeInsets.all(9),
+                      padding: EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(30)),
+                      child: ListTile(
+                        title: Text('Dark theme'),
+                        trailing: Switch(
+                          onChanged: (bool value) {
+                            _pref.setBool('DARKTHEME', value);
+                            Phoenix.rebirth(context);
+                          },
+                          value: widget.darkTheme,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      margin: EdgeInsets.all(9),
+                      padding: EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(30)),
+                      child: ListTile(
+                        title: Text('Show Online'),
+                        trailing: Switch(
+                          onChanged: (bool value) {
+                            _usersRef.setData({'online': value}, merge: true);
+                          },
+                          value: snapshot.data.data['online'],
+                        ),
+                      ),
+                    ),
                   ]),
                 );
               }
@@ -159,28 +196,21 @@ class _SettingsState extends State<Settings> {
         ));
   }
 
-  Widget getContainer(String text) {
+  getApproprateTile(String title) {
     return Container(
-      padding: EdgeInsets.all(18),
       margin: EdgeInsets.all(9),
+      padding: EdgeInsets.all(5),
       decoration: BoxDecoration(
-          color: Colors.grey.shade200, borderRadius: BorderRadius.circular(18)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Container(
-            child: Text(
-              text,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
+          color: Colors.grey.shade200, borderRadius: BorderRadius.circular(30)),
+      child: ListTile(
+          title: Text(
+            title,
           ),
-          Icon(
+          trailing: Icon(
             Icons.edit,
+            color: Colors.deepOrange,
             size: 18,
-            color: Colors.deepOrangeAccent,
-          ),
-        ],
-      ),
+          )),
     );
   }
 
@@ -194,8 +224,6 @@ class _SettingsState extends State<Settings> {
         _storage.child(widget.uid).putFile(_file).onComplete.then((value) {
           value.ref.getDownloadURL().then((value) async {
             await _usersRef.setData({'imageUrl': value}, merge: true);
-            StreamingSharedPreferences _pref =
-                await StreamingSharedPreferences.instance;
             await _pref.setString('IMAGE', value);
             print(_pref.getString('IMAGE', defaultValue: '').getValue());
             Phoenix.rebirth(context);

@@ -1,5 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chatapp/models/users.dart';
 import 'package:chatapp/screens/profile_screen.dart';
-import 'package:chatapp/widgets/custom_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -12,8 +13,28 @@ class Search extends StatefulWidget {
 }
 
 class _SearchState extends State<Search> {
-  CustomWidgets _customWidgets = CustomWidgets();
-  CollectionReference _usersRef = Firestore.instance.collection('Users');
+  Query _query = Firestore.instance.collection('Users');
+  List<Users> _users = [];
+
+  initQuery() {
+    _users = [];
+    _query
+        .where('name', isEqualTo: _searchQuery)
+        .snapshots()
+        .forEach((element) {
+      element.documents.forEach((element) {
+        setState(() {
+          _users.add(Users(
+            name: element.data['name'],
+            imageUrl: element.data['imageUrl'],
+            status: element.data['status'],
+            uid: element.documentID,
+          ));
+        });
+      });
+    });
+  }
+
   String _searchQuery;
 
   @override
@@ -35,9 +56,11 @@ class _SearchState extends State<Search> {
                 padding: const EdgeInsets.all(9),
                 child: TextField(
                   onChanged: (value) {
-                    setState(() {
+                    if (value.length > 0) {
                       _searchQuery = value;
-                    });
+
+                      initQuery();
+                    }
                   },
                   decoration: InputDecoration(
                     enabledBorder: OutlineInputBorder(
@@ -62,49 +85,46 @@ class _SearchState extends State<Search> {
                     hintStyle: TextStyle(color: Colors.grey.shade400),
                   ),
                 )),
-            StreamBuilder<QuerySnapshot>(
-                stream: _usersRef
-                    .where('name', isEqualTo: _searchQuery)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: (_searchQuery != null)
-                          ? snapshot.data.documents.length
-                          : 0,
-                      itemBuilder: (_, index) {
-                        if (snapshot.data.documents[index].documentID ==
-                            widget.uid) {
-                          return Container();
-                        } else {
-                          return GestureDetector(
-                              onTap: () {
-                                Navigator.push(context,
-                                    MaterialPageRoute(builder: (_) {
-                                  return ProfileScreen(
-                                    uid: snapshot
-                                        .data.documents[index].documentID,
-                                    name: snapshot.data.documents[index]
-                                        ['name'],
-                                    status: snapshot.data.documents[index]
-                                        ['status'],
-                                    thumbUrl: snapshot.data.documents[index]
-                                        ['imageUrl'],
-                                    myUid: widget.uid,
-                                  );
-                                }));
-                              },
-                              child: _customWidgets.getDetailedCard(
-                                snapshot.data.documents[index]['name'],
-                                snapshot.data.documents[index]['status'],
-                                snapshot.data.documents[index]['imageUrl'],
-                              ));
-                        }
-                      },
-                    );
-                  }
-                  return Center(child: CircularProgressIndicator());
+            ListView.builder(
+                shrinkWrap: true,
+                itemCount: _users.length,
+                itemBuilder: (_, index) {
+                  return Container(
+                      margin: EdgeInsets.all(9),
+                      padding: EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(30)),
+                      child: ListTile(
+                          onTap: () {
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (_) {
+                              return ProfileScreen(
+                                name: _users[index].name,
+                                status: _users[index].status,
+                                thumbUrl: _users[index].imageUrl,
+                                uid: _users[index].uid,
+                                myUid: widget.uid,
+                              );
+                            }));
+                          },
+                          title: Text(
+                            _users[index].name,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(_users[index].status),
+                          leading: CircleAvatar(
+                              maxRadius: 27,
+                              minRadius: 27,
+                              backgroundColor: Colors.white,
+                              backgroundImage: _users[index].imageUrl == 'null'
+                                  ? AssetImage('assets/circular_avatar.png')
+                                  : CachedNetworkImageProvider(
+                                      _users[index].imageUrl,
+                                    ))));
                 })
           ],
         ),

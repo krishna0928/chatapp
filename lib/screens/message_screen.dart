@@ -24,6 +24,8 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
   DocumentReference _myMessageReference;
   DocumentReference _userMessageReference;
   Stream _messageStream;
+  Set selectedItems = {};
+  bool onLongTapActive = false;
 
   final _messageController = TextEditingController();
 
@@ -39,7 +41,6 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
     _messageStream = _myMessageReference
         .collection('messages')
         .orderBy('timestamp', descending: true)
-        .limit(25)
         .snapshots();
   }
 
@@ -56,24 +57,65 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
     return Scaffold(
         key: _globalKey,
         backgroundColor: Theme.of(context).primaryColor,
-        appBar: AppBar(
-          title: Text(
-            widget.userName,
-            style: TextStyle(fontSize: 25),
-          ),
-          centerTitle: true,
-          elevation: 0,
-          actions: <Widget>[
-            IconButton(
-              icon: Icon(
-                Icons.more_horiz,
+        appBar: selectedItems.length > 0
+            ? AppBar(
+                elevation: 0,
+                leading: IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      onLongTapActive = true;
+                      selectedItems.clear();
+                    });
+                  },
+                ),
+                actions: <Widget>[
+                  Container(
+                    margin: EdgeInsets.all(9),
+                    alignment: Alignment.center,
+                    child: Text(
+                      selectedItems.length.toString(),
+                      style: TextStyle(fontSize: 23),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_forever),
+                    onPressed: () {
+                      setState(() {
+                        deleteForEveryOneSingle();
+                        onLongTapActive = true;
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_outline),
+                    onPressed: () {
+                      setState(() {
+                        deleteForMeSingle();
+                        onLongTapActive = false;
+                      });
+                    },
+                  )
+                ],
+              )
+            : AppBar(
+                title: Text(
+                  widget.userName,
+                  style: TextStyle(fontSize: 25),
+                ),
+                centerTitle: true,
+                elevation: 0,
+                actions: <Widget>[
+                  IconButton(
+                    icon: Icon(
+                      Icons.more_horiz,
+                    ),
+                    onPressed: () {
+                      getBottomSheet();
+                    },
+                  )
+                ],
               ),
-              onPressed: () {
-                getBottomSheet();
-              },
-            )
-          ],
-        ),
         body: Column(
           children: <Widget>[
             Expanded(
@@ -87,68 +129,166 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
               child: StreamBuilder<QuerySnapshot>(
                   stream: _messageStream,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.waiting) {
+                    if (snapshot.hasData) {
                       return ListView.builder(
                           reverse: true,
                           padding: EdgeInsets.only(top: 10),
                           itemCount: snapshot.data.documents.length,
                           itemBuilder: (_, index) {
-                            return ClipRRect(
-                                child: Align(
-                                    alignment: snapshot.data.documents[index]
+                            if (snapshot.data.documents[index]['uid'] ==
+                                widget.uid) {
+                              setSeen(
+                                  snapshot.data.documents[index].documentID);
+                            }
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  if (onLongTapActive) {
+                                    if (selectedItems.contains(snapshot
+                                        .data.documents[index].documentID)) {
+                                      selectedItems.remove(snapshot
+                                          .data.documents[index].documentID);
+                                    } else {
+                                      selectedItems.add(snapshot
+                                          .data.documents[index].documentID);
+                                    }
+                                  }
+                                });
+                              },
+                              onLongPress: () {
+                                setState(() {
+                                  selectedItems.add(snapshot
+                                      .data.documents[index].documentID);
+                                  setState(() {
+                                    onLongTapActive = true;
+                                  });
+                                });
+                              },
+                              child: Container(
+                                color: (selectedItems.contains(snapshot
+                                        .data.documents[index].documentID))
+                                    ? Colors.deepOrange.withOpacity(0.5)
+                                    : null,
+                                child: ClipRRect(
+                                    child: (snapshot.data.documents[index]
                                                 ['uid'] ==
-                                            widget.myUid
-                                        ? Alignment.topRight
-                                        : Alignment.topLeft,
-                                    child: Container(
-                                        margin: snapshot.data.documents[index]
-                                                    ['uid'] ==
-                                                widget.myUid
-                                            ? EdgeInsets.only(
-                                                top: 5,
-                                                left: 70,
-                                                right: 5,
-                                                bottom: 5,
-                                              )
-                                            : EdgeInsets.only(
-                                                top: 5,
-                                                left: 5,
-                                                right: 70,
-                                                bottom: 5,
-                                              ),
-                                        padding: EdgeInsets.all(9),
-                                        decoration: BoxDecoration(
-                                            color: Colors.deepOrangeAccent,
-                                            borderRadius:
-                                                BorderRadius.circular(18)),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            Text(
-                                              snapshot.data.documents[index]
-                                                  .data['message'],
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 18,
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              width: 9,
-                                            ),
-                                            Text(
-                                              snapshot.data.documents[index]
-                                                  .data['sentTime'],
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ))));
+                                            widget.myUid)
+                                        ? Align(
+                                            alignment: Alignment.topRight,
+                                            child: Container(
+                                                margin: EdgeInsets.only(
+                                                  top: 5,
+                                                  left: 70,
+                                                  right: 5,
+                                                  bottom: 5,
+                                                ),
+                                                padding: EdgeInsets.all(14),
+                                                decoration: BoxDecoration(
+                                                    color: Colors.grey.shade100,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            18)),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: <Widget>[
+                                                    Text(
+                                                      snapshot
+                                                          .data
+                                                          .documents[index]
+                                                          .data['message'],
+                                                      style: TextStyle(
+                                                        color: Colors
+                                                            .grey.shade900,
+                                                        fontSize: 18,
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 9,
+                                                    ),
+                                                    Text(
+                                                      snapshot
+                                                          .data
+                                                          .documents[index]
+                                                          .data['sentTime'],
+                                                      style: TextStyle(
+                                                        color: Colors
+                                                            .grey.shade700,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 5,
+                                                    ),
+                                                    Text(
+                                                      snapshot
+                                                          .data
+                                                          .documents[index]
+                                                          .data['state']
+                                                          .toString(),
+                                                      style: TextStyle(
+                                                          color: Colors
+                                                              .deepOrange),
+                                                    ),
+                                                  ],
+                                                )))
+                                        : Align(
+                                            alignment: Alignment.topRight,
+                                            child: Container(
+                                                margin: EdgeInsets.only(
+                                                  top: 5,
+                                                  left: 5,
+                                                  right: 70,
+                                                  bottom: 5,
+                                                ),
+                                                padding: EdgeInsets.all(14),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      Colors.deepOrangeAccent,
+                                                  borderRadius:
+                                                      BorderRadius.circular(18),
+                                                ),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: <Widget>[
+                                                    Text(
+                                                      snapshot
+                                                          .data
+                                                          .documents[index]
+                                                          .data['message'],
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 18,
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 9,
+                                                    ),
+                                                    Text(
+                                                      snapshot
+                                                          .data
+                                                          .documents[index]
+                                                          .data['sentTime'],
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )))),
+                              ),
+                            );
                           });
                     } else
                       return Text('');
@@ -218,7 +358,7 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
         height: 306,
         width: double.infinity,
         decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: Colors.grey.shade200,
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
@@ -226,9 +366,9 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
         child: Column(
           children: <Widget>[
             SizedBox(
-              height: 20,
+              height: 18,
             ),
-            GestureDetector(
+            ListTile(
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) {
                   return ProfileScreen(
@@ -240,156 +380,75 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
                   );
                 }));
               },
-              child: Container(
-                  margin: EdgeInsets.all(9),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Icon(
-                        Icons.person,
-                        color: Colors.red,
-                        size: 30,
-                      ),
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Text(
-                        'View Profile',
-                        style: TextStyle(
-                            color: Colors.red.withOpacity(0.9),
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )),
+              leading: Icon(
+                Icons.person,
+                color: Colors.red,
+                size: 30,
+              ),
+              title: Text(
+                'Show Profile',
+              ),
             ),
-            GestureDetector(
+            ListTile(
               onTap: () {},
-              child: Container(
-                  margin: EdgeInsets.all(9),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Icon(
-                        Icons.image,
-                        color: Colors.red,
-                        size: 30,
-                      ),
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Text(
-                        'Change Backgroud',
-                        style: TextStyle(
-                            color: Colors.red.withOpacity(0.9),
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )),
+              leading: Icon(
+                Icons.image,
+                color: Colors.red,
+                size: 30,
+              ),
+              title: Text('Change Background'),
             ),
-            GestureDetector(
+            ListTile(
               onTap: () {
                 deleteForMe().whenComplete(() {
                   Navigator.pop(context);
                 }).whenComplete(() => Navigator.pop(context));
               },
-              child: Container(
-                  margin: EdgeInsets.all(9),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Icon(
-                        Icons.delete_outline,
-                        color: Colors.red,
-                        size: 30,
-                      ),
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Text(
-                        'Delete for me',
-                        style: TextStyle(
-                            color: Colors.red.withOpacity(0.9),
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )),
+              leading: Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 30,
+              ),
+              title: Text(
+                'Delete for me',
+              ),
             ),
-            GestureDetector(
+            ListTile(
               onTap: () {
                 deleteForEveryOne().whenComplete(() {
                   Navigator.pop(context);
                 }).whenComplete(() => Navigator.pop(context));
               },
-              child: Container(
-                  margin: EdgeInsets.all(9),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Icon(
-                        Icons.delete_forever,
-                        color: Colors.red,
-                        size: 30,
-                      ),
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Text(
-                        'Delete for everyone',
-                        style: TextStyle(
-                            color: Colors.red.withOpacity(0.9),
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )),
+              leading: Icon(
+                Icons.delete_forever,
+                color: Colors.red,
+                size: 30,
+              ),
+              title: Text(
+                'Delete for everyone',
+              ),
             ),
-            GestureDetector(
-              onTap: () {},
-              child: Container(
-                  margin: EdgeInsets.all(9),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Icon(
-                        Icons.block,
-                        color: Colors.red,
-                        size: 30,
-                      ),
-                      SizedBox(
-                        width: 18,
-                      ),
-                      Text(
-                        'Block',
-                        style: TextStyle(
-                            color: Colors.red.withOpacity(0.9),
-                            fontSize: 23,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )),
+            ListTile(
+              leading: Icon(
+                Icons.block,
+                color: Colors.red,
+                size: 30,
+              ),
+              title: Text(
+                'Block',
+              ),
             ),
           ],
         ),
       );
     });
+  }
+
+  setSeen(String id) {
+    _userMessageReference
+        .collection('messages')
+        .document(id)
+        .setData({'state': 3}, merge: true);
   }
 
   void sendMessage() async {
@@ -404,7 +463,8 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
       'timestamp': timestamp,
       'seen': true,
       'uid': widget.myUid,
-      'sentTime': sentTime
+      'sentTime': sentTime,
+      'state': 0,
     }).whenComplete(() {
       _myMessageReference.setData({
         'timestamp': timestamp,
@@ -444,5 +504,23 @@ class _MessagingScreeenState extends State<MessagingScreeen> {
             doc.reference.delete();
           }
         }).whenComplete(() => _userMessageReference.delete()));
+  }
+
+  getMessageTile(bool isMe) {
+    return Container();
+  }
+
+  void deleteForEveryOneSingle() {}
+
+  void deleteForMeSingle() {
+    selectedItems.forEach((element) async {
+      await _myMessageReference
+          .collection('messages')
+          .document(element)
+          .delete();
+      setState(() {
+        selectedItems.remove(element);
+      });
+    });
   }
 }

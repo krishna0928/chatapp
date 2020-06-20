@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:streaming_shared_preferences/streaming_shared_preferences.dart';
 
 class AuthServices {
   FirebaseAuth _auth = FirebaseAuth.instance;
   CollectionReference _usersRef = Firestore.instance.collection('Users');
   StreamingSharedPreferences _sharedPreferences;
+  FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
 
   Future registerWithEmailAndPass(
       String email, String password, String name) async {
@@ -15,12 +17,15 @@ class AuthServices {
       result = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
 
+      var token = await _firebaseMessaging.getToken();
+
       await _usersRef.document(result.user.uid).setData({
         'name': name,
         'status': 'Hey there , I\'m using Chatter',
         'thumbUrl': 'null',
         'imageUrl': 'null',
         'online': true,
+        'device_token': token,
       });
 
       _sharedPreferences = await StreamingSharedPreferences.instance;
@@ -39,6 +44,11 @@ class AuthServices {
     try {
       result = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
+      var token = await _firebaseMessaging.getToken();
+
+      await _usersRef
+          .document(result.user.uid)
+          .setData({'token': token}, merge: true);
       _sharedPreferences = await StreamingSharedPreferences.instance;
       await _sharedPreferences.setString('UID', result.user.uid);
       await _usersRef.document(result.user.uid).get().then((value) {
