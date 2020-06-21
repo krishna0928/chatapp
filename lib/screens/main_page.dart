@@ -6,7 +6,6 @@ import 'package:chatapp/screens/message_screen.dart';
 import 'package:chatapp/screens/search.dart';
 import 'package:chatapp/screens/settings.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 
@@ -21,7 +20,6 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
   initPages() {
     String uid = widget.uid;
     screenList = [
@@ -36,22 +34,7 @@ class _MainPageState extends State<MainPage> {
     ];
   }
 
-  setUpNotifications() {
-    _firebaseMessaging.configure(
-      onMessage: (Map<String, dynamic> message) async {
-        print("onMessage: $message");
-      },
-      onLaunch: (Map<String, dynamic> message) async {
-        print("onLaunch: $message");
-      },
-      onResume: (Map<String, dynamic> message) async {
-        print("onResume: $message");
-      },
-    );
-  }
-
   Set selectedTiles = {};
-  bool selectAll = false;
   bool isLongActive = false;
 
   CollectionReference _chatsRef;
@@ -69,7 +52,6 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     initPages();
     initData();
-    setUpNotifications();
     super.initState();
   }
 
@@ -82,6 +64,7 @@ class _MainPageState extends State<MainPage> {
 
   int _currentIndex = 0;
   String title = 'Chats';
+  bool loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -106,14 +89,6 @@ class _MainPageState extends State<MainPage> {
                     selectedTiles.length.toString(),
                     style: TextStyle(fontSize: 23),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.select_all),
-                  onPressed: () {
-                    setState(() {
-                      selectAll = true;
-                    });
-                  },
                 ),
                 IconButton(
                   icon: Icon(Icons.delete_forever),
@@ -159,23 +134,22 @@ class _MainPageState extends State<MainPage> {
                       child: Text(
                         widget.name,
                         style: TextStyle(
-                          color: Colors.deepOrangeAccent,
+                          color: Theme.of(context).accentColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 30,
                         ),
                       ),
                     ),
                     CircleAvatar(
-                      maxRadius: 50,
-                      minRadius: 50,
-                      backgroundColor: Colors.white,
-                      backgroundImage: widget.imageUrl != 'null'
-                          ? CachedNetworkImageProvider(
-                              widget.imageUrl,
-                            )
-                          : Image.asset('assets/circular_avatar.png',
-                              height: 117, width: 117),
-                    )
+                        maxRadius: 50,
+                        minRadius: 50,
+                        backgroundColor: Colors.white,
+                        backgroundImage: widget.imageUrl != 'null'
+                            ? CachedNetworkImageProvider(
+                                widget.imageUrl,
+                              )
+                            : Image.asset('assets/circular_avatar.png',
+                                height: 117, width: 117))
                   ],
                 ),
                 GestureDetector(
@@ -234,169 +208,188 @@ class _MainPageState extends State<MainPage> {
             )),
       body: (_currentIndex == 0)
           ? Scaffold(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Theme.of(context).accentColor,
               body: Container(
                 width: double.infinity,
                 height: double.infinity,
                 decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).backgroundColor,
                     borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(30),
                         topRight: Radius.circular(30))),
-                child: StreamBuilder<QuerySnapshot>(
-                    stream: _chatsRef
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.data != null) {
-                        if (selectAll) {
-                          snapshot.data.documents.forEach((element) {
-                            selectedTiles.add(element.documentID);
-                          });
-                        }
-                        return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: snapshot.data.documents.length,
-                            itemBuilder: (_, index) {
-                              return StreamBuilder<DocumentSnapshot>(
-                                  stream: _usersRef
-                                      .document(snapshot
-                                          .data.documents[index].documentID)
-                                      .snapshots(),
-                                  builder: (context, usersSnap) {
-                                    if (usersSnap.hasData) {
-                                      return Container(
-                                          margin: EdgeInsets.all(9),
-                                          padding: EdgeInsets.all(5),
-                                          decoration: BoxDecoration(
-                                              color: selectedTiles.contains(
-                                                      usersSnap.data.documentID)
-                                                  ? Colors.orangeAccent
-                                                      .withOpacity(0.5)
-                                                  : Colors.grey.shade200,
-                                              borderRadius:
-                                                  BorderRadius.circular(30)),
-                                          child: StreamBuilder<QuerySnapshot>(
-                                              stream: _lastMsgRef
-                                                  .document(snapshot
-                                                      .data
-                                                      .documents[index]
-                                                      .documentID)
-                                                  .collection('messages')
-                                                  .orderBy('timestamp',
-                                                      descending: true)
-                                                  .limit(1)
-                                                  .snapshots(),
-                                              builder: (context, snapshot) {
-                                                if (snapshot.data != null) {
-                                                  return ListTile(
-                                                    onLongPress: () {
-                                                      setState(() {
-                                                        selectedTiles.add(
-                                                            usersSnap.data
-                                                                .documentID);
-                                                        isLongActive = true;
-                                                      });
-                                                    },
-                                                    onTap: () {
-                                                      if (isLongActive) {
-                                                        if (selectedTiles
-                                                            .contains(usersSnap
-                                                                .data
-                                                                .documentID)) {
+                child: loading
+                    ? Center(child: CircularProgressIndicator())
+                    : StreamBuilder<QuerySnapshot>(
+                        stream: _chatsRef
+                            .orderBy('timestamp', descending: true)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.data != null) {
+                            return ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: snapshot.data.documents.length,
+                                itemBuilder: (_, index) {
+                                  return StreamBuilder<DocumentSnapshot>(
+                                      stream: _usersRef
+                                          .document(snapshot
+                                              .data.documents[index].documentID)
+                                          .snapshots(),
+                                      builder: (context, usersSnap) {
+                                        if (usersSnap.hasData) {
+                                          return Container(
+                                              margin: EdgeInsets.all(9),
+                                              padding: EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                  color: selectedTiles.contains(
+                                                          usersSnap
+                                                              .data.documentID)
+                                                      ? Colors.orangeAccent
+                                                          .withOpacity(0.5)
+                                                      : (snapshot.data.documents[index].data['seen'] == true) ? Theme.of(context)
+                                                          .cardColor : Colors.deepOrange.withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30)),
+                                              child: StreamBuilder<
+                                                      QuerySnapshot>(
+                                                  stream: _lastMsgRef
+                                                      .document(snapshot
+                                                          .data
+                                                          .documents[index]
+                                                          .documentID)
+                                                      .collection('messages')
+                                                      .orderBy('timestamp',
+                                                          descending: true)
+                                                      .limit(1)
+                                                      .snapshots(),
+                                                  builder: (context, snapshot) {
+                                                    if (snapshot.data != null) {
+                                                      return ListTile(
+                                                        onLongPress: () {
                                                           setState(() {
-                                                            selectedTiles.remove(
+                                                            selectedTiles.add(
                                                                 usersSnap.data
                                                                     .documentID);
+                                                            isLongActive = true;
                                                           });
-                                                        }
-                                                      } else if (selectedTiles
-                                                              .length >
-                                                          0) {
-                                                        setState(() {
-                                                          selectedTiles.add(
-                                                              usersSnap.data
-                                                                  .documentID);
-                                                        });
-                                                      } else {
-                                                        Navigator.push(context,
-                                                            MaterialPageRoute(
-                                                                builder: (_) {
-                                                          return MessagingScreeen(
-                                                            myUid: widget.uid,
-                                                            userName: usersSnap
-                                                                .data
-                                                                .data['name'],
-                                                            thumbnail: usersSnap
-                                                                    .data.data[
-                                                                'imageUrl'],
-                                                            status: usersSnap
-                                                                .data
-                                                                .data['status'],
-                                                            uid: usersSnap.data
-                                                                .documentID,
-                                                          );
-                                                        }));
-                                                      }
-                                                    },
-                                                    leading: CircleAvatar(
-                                                      maxRadius: 27,
-                                                      minRadius: 27,
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      backgroundImage: usersSnap
-                                                                      .data
-                                                                      .data[
-                                                                  'imageUrl'] ==
-                                                              'null'
-                                                          ? AssetImage(
-                                                              'assets/circular_avatar.png')
-                                                          : CachedNetworkImageProvider(
-                                                              usersSnap.data
-                                                                      .data[
-                                                                  'imageUrl'],
-                                                            ),
-                                                    ),
-                                                    title: Text(
-                                                      usersSnap
-                                                          .data.data['name'],
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    subtitle: Text(
-                                                      snapshot.data.documents[0]
-                                                          ['message'],
-                                                      style: TextStyle(
-                                                        color: Colors.blueGrey,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                    trailing: Text(
-                                                        snapshot.data
-                                                                .documents[0]
-                                                            ['sentTime'],
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color: Colors
-                                                              .grey.shade700,
-                                                        )),
-                                                  );
-                                                } else
-                                                  return Center(
-                                                      child: Text('........'));
-                                              }));
-                                    } else {
-                                      return Container();
-                                    }
-                                  });
-                            });
-                      } else {
-                        return Container();
-                      }
-                    }),
+                                                        },
+                                                        onTap: () {
+                                                          if (isLongActive) {
+                                                            if (selectedTiles
+                                                                .contains(usersSnap
+                                                                    .data
+                                                                    .documentID)) {
+                                                              setState(() {
+                                                                selectedTiles.remove(
+                                                                    usersSnap
+                                                                        .data
+                                                                        .documentID);
+                                                              });
+                                                            } else if (selectedTiles
+                                                                    .length >
+                                                                0) {
+                                                              setState(() {
+                                                                selectedTiles.add(
+                                                                    usersSnap
+                                                                        .data
+                                                                        .documentID);
+                                                              });
+                                                            }
+                                                          } else {
+                                                            Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                    builder:
+                                                                        (_) {
+                                                              return MessagingScreeen(
+                                                                myUid:
+                                                                    widget.uid,
+                                                                userName: usersSnap
+                                                                        .data
+                                                                        .data[
+                                                                    'name'],
+                                                                thumbnail: usersSnap
+                                                                        .data
+                                                                        .data[
+                                                                    'imageUrl'],
+                                                                status: usersSnap
+                                                                        .data
+                                                                        .data[
+                                                                    'status'],
+                                                                uid: usersSnap
+                                                                    .data
+                                                                    .documentID,
+                                                              );
+                                                            }));
+                                                          }
+                                                        },
+                                                        leading: CircleAvatar(
+                                                          maxRadius: 27,
+                                                          minRadius: 27,
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          backgroundImage: usersSnap
+                                                                          .data
+                                                                          .data[
+                                                                      'imageUrl'] ==
+                                                                  'null'
+                                                              ? AssetImage(
+                                                                  'assets/circular_avatar.png')
+                                                              : CachedNetworkImageProvider(
+                                                                  usersSnap.data
+                                                                          .data[
+                                                                      'imageUrl'],
+                                                                ),
+                                                        ),
+                                                        title: Text(
+                                                          usersSnap.data
+                                                              .data['name'],
+                                                          style: TextStyle(
+                                                            fontSize: 18,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                          overflow:
+                                                              TextOverflow.fade,
+                                                        ),
+                                                        subtitle: Text(
+                                                          snapshot.data
+                                                                  .documents[0]
+                                                              ['message'],
+                                                          style: TextStyle(
+                                                            color:
+                                                                Colors.blueGrey,
+                                                            fontSize: 16,
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                        trailing: Text(
+                                                            snapshot.data
+                                                                    .documents[0]
+                                                                [
+                                                                'sentTime'],
+                                                            style:
+                                                                TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors
+                                                                  .grey
+                                                                  .shade700,
+                                                            )),
+                                                      );
+                                                    } else
+                                                      return Container();
+                                                  }));
+                                        } else {
+                                          return Container();
+                                        }
+                                      });
+                                });
+                          } else {
+                            return Container();
+                          }
+                        }),
               ))
           : screenList[_currentIndex],
     );
@@ -419,6 +412,9 @@ class _MainPageState extends State<MainPage> {
   }
 
   deleteForMe() {
+    setState(() {
+      loading = true;
+    });
     selectedTiles.forEach((element) async {
       await _chatsRef
           .document(element)
@@ -433,10 +429,16 @@ class _MainPageState extends State<MainPage> {
       setState(() {
         selectedTiles.remove(element);
       });
+      setState(() {
+        loading = false;
+      });
     });
   }
 
   deleteForEveryOne() {
+    setState(() {
+      loading = true;
+    });
     selectedTiles.forEach((element) async {
       await _rootRef
           .collection(element)
@@ -462,6 +464,9 @@ class _MainPageState extends State<MainPage> {
       await _chatsRef.document(element).delete();
       setState(() {
         selectedTiles.remove(element);
+      });
+      setState(() {
+        loading = false;
       });
     });
   }

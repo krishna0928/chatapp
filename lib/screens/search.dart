@@ -23,14 +23,16 @@ class _SearchState extends State<Search> {
         .snapshots()
         .forEach((element) {
       element.documents.forEach((element) {
-        setState(() {
-          _users.add(Users(
-            name: element.data['name'],
-            imageUrl: element.data['imageUrl'],
-            status: element.data['status'],
-            uid: element.documentID,
-          ));
-        });
+        if (element.documentID != widget.uid) {
+          setState(() {
+            _users.add(Users(
+              name: element.data['name'],
+              imageUrl: element.data['imageUrl'],
+              status: element.data['status'],
+              uid: element.documentID,
+            ));
+          });
+        }
       });
     });
   }

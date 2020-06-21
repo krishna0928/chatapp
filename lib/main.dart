@@ -28,9 +28,12 @@ Future<void> main() async {
         darkTheme: darkTheme,
       ),
       theme: ThemeData(
-          primaryColor: Colors.deepOrangeAccent,
-          primarySwatch: Colors.deepOrange,
-          accentColor: Colors.orange),
+        primaryColor: Colors.deepOrangeAccent,
+        primarySwatch: Colors.deepOrange,
+        backgroundColor: Colors.white,
+        accentColor: Colors.deepOrangeAccent,
+        cardColor: Colors.grey.shade200,
+      ),
       debugShowCheckedModeBanner: false,
     )),
   );
